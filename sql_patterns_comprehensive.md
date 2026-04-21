@@ -523,15 +523,13 @@ HAVING COUNT(*) > 1;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Average Salary: Departments vs Company** | Hard | [LC 615 🔒](https://leetcode.com/problems/average-salary-departments-vs-company/) | [StrataScratch](https://platform.stratascratch.com/coding/10353-workers-with-the-highest-salaries) |
-| 2 | **Students Report By Geography** | Hard | [LC 618 🔒](https://leetcode.com/problems/students-report-by-geography/) | [StrataScratch](https://platform.stratascratch.com/coding/10354-most-profitable-companies) |
-| 3 | **Market Analysis II** | Hard | [LC 1159 🔒](https://leetcode.com/problems/market-analysis-ii/) | [StrataScratch](https://platform.stratascratch.com/coding/10159-ranking-most-active-guests) |
-| 4 | Duplicate Emails | Easy | [LC 182](https://leetcode.com/problems/duplicate-emails/) | [StrataScratch](https://platform.stratascratch.com/coding/9891-duplicate-emails) |
-| 5 | Classes More Than 5 Students | Easy | [LC 596](https://leetcode.com/problems/classes-more-than-5-students/) | — |
-| 6 | Customers Who Bought All Products | Medium | [LC 1045 🔒](https://leetcode.com/problems/customers-who-bought-all-products/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 7 | Immediate Food Delivery II | Medium | [LC 1174 🔒](https://leetcode.com/problems/immediate-food-delivery-ii/) | [StrataScratch](https://platform.stratascratch.com/coding/10183-total-order-cost) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Duplicate Emails | Easy | [LC 182](https://leetcode.com/problems/duplicate-emails/) | [DataLemur 🔗](https://datalemur.com/questions/sql-duplicate-emails) |
+| 2 | Classes More Than 5 Students | Easy | [LC 596](https://leetcode.com/problems/classes-more-than-5-students/) | [DataLemur 🔗](https://datalemur.com/questions/sql-classes-more-than-5-students) |
+| 3 | Customers Who Bought All Products | Medium | [LC 1045 🔒](https://leetcode.com/problems/customers-who-bought-all-products/) | [DataLemur 🔗](https://datalemur.com/questions/sql-customers-who-bought-all-products) |
+| 4 | Immediate Food Delivery II | Medium | [LC 1174 🔒](https://leetcode.com/problems/immediate-food-delivery-ii/) | [DataLemur 🔗](https://datalemur.com/questions/sql-immediate-food-delivery-ii) |
+| 5 | **Average Salary: Departments vs Company** | Hard | [LC 615 🔒](https://leetcode.com/problems/average-salary-departments-vs-company/) | [DataLemur 🔗](https://datalemur.com/questions/sql-average-salary-departments-vs-company) |
 
 ---
 
@@ -638,14 +636,13 @@ ORDER BY id;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Median Employee Salary** | Hard | [LC 569 🔒](https://leetcode.com/problems/median-employee-salary/) | [StrataScratch](https://platform.stratascratch.com/coding/10353-workers-with-the-highest-salaries) |
-| 2 | **Find Cumulative Salary of an Employee** | Hard | [LC 579 🔒](https://leetcode.com/problems/find-cumulative-salary-of-an-employee/) | [StrataScratch](https://platform.stratascratch.com/coding/10314-revenue-over-time) |
-| 3 | **Game Play Analysis V** | Hard | [LC 1097 🔒](https://leetcode.com/problems/game-play-analysis-v/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 4 | Customers Who Never Order | Easy | [LC 183](https://leetcode.com/problems/customers-who-never-order/) | [StrataScratch](https://platform.stratascratch.com/coding/10183-total-order-cost) |
-| 5 | Department Highest Salary | Medium | [LC 184](https://leetcode.com/problems/department-highest-salary/) | [StrataScratch](https://platform.stratascratch.com/coding/10353-workers-with-the-highest-salaries) |
-| 6 | Exchange Seats | Medium | [LC 626](https://leetcode.com/problems/exchange-seats/) | [StrataScratch](https://platform.stratascratch.com/coding/10351-activity-rank) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Customers Who Never Order | Easy | [LC 183](https://leetcode.com/problems/customers-who-never-order/) | [DataLemur 🔗](https://datalemur.com/questions/sql-customers-who-never-order) |
+| 2 | Department Highest Salary | Medium | [LC 184](https://leetcode.com/problems/department-highest-salary/) | [DataLemur 🔗](https://datalemur.com/questions/sql-department-highest-salary) |
+| 3 | Exchange Seats | Medium | [LC 626](https://leetcode.com/problems/exchange-seats/) | [DataLemur 🔗](https://datalemur.com/questions/sql-exchange-seats) |
+| 4 | **Median Employee Salary** | Hard | [LC 569 🔒](https://leetcode.com/problems/median-employee-salary/) | [DataLemur 🔗](https://datalemur.com/questions/sql-median-employee-salary) |
+| 5 | **Game Play Analysis V** | Hard | [LC 1097 🔒](https://leetcode.com/problems/game-play-analysis-v/) | [DataLemur 🔗](https://datalemur.com/questions/sql-game-play-analysis-v) |
 
 ---
 
@@ -733,15 +730,13 @@ GROUP BY t.request_date;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Customers with Strictly Increasing Purchases** | Hard | [LC 2474 🔒](https://leetcode.com/problems/customers-with-strictly-increasing-purchases/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 2 | **Market Analysis I** | Medium | [LC 1158 🔒](https://leetcode.com/problems/market-analysis-i/) | [StrataScratch](https://platform.stratascratch.com/coding/10159-ranking-most-active-guests) |
-| 3 | **Market Analysis II** | Hard | [LC 1159 🔒](https://leetcode.com/problems/market-analysis-ii/) | [StrataScratch](https://platform.stratascratch.com/coding/10159-ranking-most-active-guests) |
-| 4 | Trips and Users | Hard | [LC 262](https://leetcode.com/problems/trips-and-users/) | [StrataScratch](https://platform.stratascratch.com/coding/10285-acceptance-rate-by-date) |
-| 5 | Employees Earning More Than Managers | Easy | [LC 181](https://leetcode.com/problems/employees-earning-more-than-their-managers/) | [StrataScratch](https://platform.stratascratch.com/coding/10353-workers-with-the-highest-salaries) |
-| 6 | Find Duplicate Emails | Easy | [LC 182](https://leetcode.com/problems/duplicate-emails/) | [StrataScratch](https://platform.stratascratch.com/coding/9891-duplicate-emails) |
-| 7 | Friend Requests II | Medium | [LC 602 🔒](https://leetcode.com/problems/friend-requests-ii-who-has-the-most-friends/) | [StrataScratch](https://platform.stratascratch.com/coding/10284-popularity-percentage) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Employees Earning More Than Managers | Easy | [LC 181](https://leetcode.com/problems/employees-earning-more-than-their-managers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-employees-earning-more-than-managers) |
+| 2 | Friend Requests II | Medium | [LC 602 🔒](https://leetcode.com/problems/friend-requests-ii-who-has-the-most-friends/) | [DataLemur 🔗](https://datalemur.com/questions/sql-friend-requests-ii) |
+| 3 | **Market Analysis I** | Medium | [LC 1158 🔒](https://leetcode.com/problems/market-analysis-i/) | [DataLemur 🔗](https://datalemur.com/questions/sql-market-analysis-i) |
+| 4 | **Trips and Users** | Hard | [LC 262](https://leetcode.com/problems/trips-and-users/) | [DataLemur 🔗](https://datalemur.com/questions/sql-trips-and-users) |
+| 5 | **Customers with Strictly Increasing Purchases** | Hard | [LC 2474 🔒](https://leetcode.com/problems/customers-with-strictly-increasing-purchases/) | [DataLemur 🔗](https://datalemur.com/questions/sql-customers-with-strictly-increasing-purchases) |
 
 ---
 
@@ -819,12 +814,12 @@ WHERE NOT EXISTS (
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Sales by Day of the Week** | Hard | [LC 1479 🔒](https://leetcode.com/problems/sales-by-day-of-the-week/) | [StrataScratch](https://platform.stratascratch.com/coding/10354-most-profitable-companies) |
-| 2 | **Find the Missing IDs** | Medium | [LC 1613 🔒](https://leetcode.com/problems/find-the-missing-ids/) | [StrataScratch](https://platform.stratascratch.com/coding/10046-top-5-states-with-5-star-businesses) |
-| 3 | Customers Who Never Order | Easy | [LC 183](https://leetcode.com/problems/customers-who-never-order/) | [StrataScratch](https://platform.stratascratch.com/coding/10183-total-order-cost) |
-| 4 | Students and Examinations | Easy | [LC 1280](https://leetcode.com/problems/students-and-examinations/) | [StrataScratch](https://platform.stratascratch.com/coding/10351-activity-rank) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Customers Who Never Order | Easy | [LC 183](https://leetcode.com/problems/customers-who-never-order/) | [DataLemur 🔗](https://datalemur.com/questions/sql-customers-who-never-order) |
+| 2 | Students and Examinations | Easy | [LC 1280](https://leetcode.com/problems/students-and-examinations/) | [DataLemur 🔗](https://datalemur.com/questions/sql-students-and-examinations) |
+| 3 | Find the Missing IDs | Medium | [LC 1613 🔒](https://leetcode.com/problems/find-the-missing-ids/) | [DataLemur 🔗](https://datalemur.com/questions/sql-find-the-missing-ids) |
+| 4 | **Sales by Day of the Week** | Hard | [LC 1479 🔒](https://leetcode.com/problems/sales-by-day-of-the-week/) | [DataLemur 🔗](https://datalemur.com/questions/sql-sales-by-day-of-the-week) |
 
 ---
 
@@ -1131,22 +1126,13 @@ WHERE rnk <= 3;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Department Top Three Salaries** | Hard | [LC 185](https://leetcode.com/problems/department-top-three-salaries/) | [StrataScratch](https://platform.stratascratch.com/coding/10353-workers-with-the-highest-salaries) |
-| 2 | **Market Analysis II** | Hard | [LC 1159 🔒](https://leetcode.com/problems/market-analysis-ii/) | [StrataScratch](https://platform.stratascratch.com/coding/10159-ranking-most-active-guests) |
-| 3 | **Average Selling Price** | Medium | [LC 1369 🔒](https://leetcode.com/problems/average-selling-price/) | — |
-| 4 | **Number of Comments per Post** | Easy | [LC 1412 🔒](https://leetcode.com/problems/number-of-comments-per-post/) | — |
-| 5 | **New Users Daily Count** | Medium | [LC 1972 🔒](https://leetcode.com/problems/new-users-daily-count/) | — |
-| 6 | **Account Balance** | Medium | [LC 2010 🔒](https://leetcode.com/problems/account-balance/) | — |
-| 7 | **Steps to Make Array Non-decreasing** | Medium | [LC 2362 🔒](https://leetcode.com/problems/steps-to-make-array-non-decreasing/) | — |
-| 8 | **Number of Unique Categories** | Medium | [LC 2720 🔒](https://leetcode.com/problems/number-of-unique-categories/) | — |
-| 9 | **Count the Number of Good Partitions** | Hard | [LC 2793 🔒](https://leetcode.com/problems/count-the-number-of-good-partitions/) | — |
-| 10 | **Count of Interesting Subarrays** | Medium | [LC 2995 🔒](https://leetcode.com/problems/count-of-interesting-subarrays/) | — |
-| 11 | Rank Scores | Medium | [LC 178](https://leetcode.com/problems/rank-scores/) | [DataLemur](https://datalemur.com/questions/sql-top-three-salaries) |
-| 12 | Second Highest Salary | Medium | [LC 176](https://leetcode.com/problems/second-highest-salary/) | [DataLemur](https://datalemur.com/questions/sql-second-highest-salary) |
-| 13 | Nth Highest Salary | Medium | [LC 177](https://leetcode.com/problems/nth-highest-salary/) | — |
-| 14 | Consecutive Numbers | Medium | [LC 180](https://leetcode.com/problems/consecutive-numbers/) | — |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Second Highest Salary | Medium | [LC 176](https://leetcode.com/problems/second-highest-salary/) | [DataLemur 🔗](https://datalemur.com/questions/sql-second-highest-salary) |
+| 2 | Nth Highest Salary | Medium | [LC 177](https://leetcode.com/problems/nth-highest-salary/) | [DataLemur 🔗](https://datalemur.com/questions/sql-nth-highest-salary) |
+| 3 | Rank Scores | Medium | [LC 178](https://leetcode.com/problems/rank-scores/) | [DataLemur 🔗](https://datalemur.com/questions/sql-rank-scores) |
+| 4 | **Department Top Three Salaries** | Hard | [LC 185](https://leetcode.com/problems/department-top-three-salaries/) | [DataLemur 🔗](https://datalemur.com/questions/sql-department-top-three-salaries) |
+| 5 | **Market Analysis II** | Hard | [LC 1159 🔒](https://leetcode.com/problems/market-analysis-ii/) | [DataLemur 🔗](https://datalemur.com/questions/sql-market-analysis-ii) |
 
 ---
 
@@ -1254,13 +1240,11 @@ WHERE temperature > prev_temp
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Find Cumulative Salary of an Employee** | Hard | [LC 579 🔒](https://leetcode.com/problems/find-cumulative-salary-of-an-employee/) | [StrataScratch](https://platform.stratascratch.com/coding/10314-revenue-over-time) |
-| 2 | **Human Traffic of Stadium** | Hard | [LC 601](https://leetcode.com/problems/human-traffic-of-stadium/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 3 | **Tree Node** | Medium | [LC 1651 🔒](https://leetcode.com/problems/tree-node/) | — |
-| 4 | Rising Temperature | Easy | [LC 197](https://leetcode.com/problems/rising-temperature/) | [DataLemur](https://datalemur.com/questions/sql-rising-temperature) |
-| 5 | Consecutive Numbers | Medium | [LC 180](https://leetcode.com/problems/consecutive-numbers/) | [DataLemur](https://datalemur.com/questions/sql-consecutive-numbers) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Rising Temperature | Easy | [LC 197](https://leetcode.com/problems/rising-temperature/) | [DataLemur 🔗](https://datalemur.com/questions/sql-rising-temperature) |
+| 2 | Consecutive Numbers | Medium | [LC 180](https://leetcode.com/problems/consecutive-numbers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-consecutive-numbers) |
+| 3 | **Find Cumulative Salary of an Employee** | Hard | [LC 579 🔒](https://leetcode.com/problems/find-cumulative-salary-of-an-employee/) | [DataLemur 🔗](https://datalemur.com/questions/sql-find-cumulative-salary-of-an-employee) |
 
 ---
 
@@ -1360,11 +1344,12 @@ LIMIT 1;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Count Salary Categories** | Medium | [LC 2494 🔒](https://leetcode.com/problems/count-salary-categories/) | — |
-| 2 | **Last Person to Fit in the Bus** | Medium | [LC 1204](https://leetcode.com/problems/last-person-to-fit-in-the-bus/) | [DataLemur](https://datalemur.com/questions/sql-last-person-to-fit-in-bus) |
-| 3 | Game Play Analysis III | Medium | [LC 550 🔒](https://leetcode.com/problems/game-play-analysis-iii/) | [DataLemur](https://datalemur.com/questions/sql-game-play-analysis) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Game Play Analysis III | Medium | [LC 550 🔒](https://leetcode.com/problems/game-play-analysis-iii/) | [DataLemur 🔗](https://datalemur.com/questions/sql-game-play-analysis-iii) |
+| 2 | Last Person to Fit in the Bus | Medium | [LC 1204](https://leetcode.com/problems/last-person-to-fit-in-the-bus/) | [DataLemur 🔗](https://datalemur.com/questions/sql-last-person-to-fit-in-the-bus) |
+| 3 | Account Balance | Medium | [LC 2010 🔒](https://leetcode.com/problems/account-balance/) | [DataLemur 🔗](https://datalemur.com/questions/sql-account-balance) |
+| 4 | **Median Given Frequency of Numbers** | Hard | [LC 571 🔒](https://leetcode.com/problems/median-given-frequency-of-numbers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-median-given-frequency-of-numbers) |
 
 ---
 
@@ -1616,16 +1601,13 @@ WHERE num = prev AND num = next;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Human Traffic of Stadium** | Hard | [LC 601](https://leetcode.com/problems/human-traffic-of-stadium/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 2 | **Active Businesses** | Medium | [LC 1225 🔒](https://leetcode.com/problems/active-businesses/) | — |
-| 3 | **Longest Subsequence With Limited Sum** | Medium | [LC 2173](https://leetcode.com/problems/longest-subsequence-with-limited-sum/) | — |
-| 4 | **Consecutive Transactions with Increasing Amounts** | Hard | [LC 2701 🔒](https://leetcode.com/problems/consecutive-transactions-with-increasing-amounts/) | — |
-| 5 | **Consecutive Transactions** | Medium | [LC 2752 🔒](https://leetcode.com/problems/consecutive-transactions/) | — |
-| 6 | Consecutive Numbers | Medium | [LC 180](https://leetcode.com/problems/consecutive-numbers/) | [DataLemur](https://datalemur.com/questions/sql-consecutive-numbers) |
-| 7 | Find the Missing IDs | Medium | [LC 1613 🔒](https://leetcode.com/problems/find-the-missing-ids/) | — |
-| 8 | Active Users | Medium | [LC 1285 🔒](https://leetcode.com/problems/active-users/) | — |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Consecutive Numbers | Medium | [LC 180](https://leetcode.com/problems/consecutive-numbers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-consecutive-numbers) |
+| 2 | Active Businesses | Medium | [LC 1225 🔒](https://leetcode.com/problems/active-businesses/) | [DataLemur 🔗](https://datalemur.com/questions/sql-active-businesses) |
+| 3 | Active Users | Medium | [LC 1285 🔒](https://leetcode.com/problems/active-users/) | [DataLemur 🔗](https://datalemur.com/questions/sql-active-users) |
+| 4 | **Human Traffic of Stadium** | Hard | [LC 601](https://leetcode.com/problems/human-traffic-of-stadium/) | [DataLemur 🔗](https://datalemur.com/questions/sql-human-traffic-of-stadium) |
+| 5 | **Consecutive Transactions with Increasing Amounts** | Hard | [LC 2701 🔒](https://leetcode.com/problems/consecutive-transactions-with-increasing-amounts/) | [DataLemur 🔗](https://datalemur.com/questions/sql-consecutive-transactions-with-increasing-amounts) |
 
 ---
 
@@ -1841,17 +1823,13 @@ ORDER BY d.dt;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Find the Quiet Students in All Exams** | Hard | [LC 1336](https://leetcode.com/problems/find-the-quiet-students-in-all-exams/) | — |
-| 2 | **Median Employee Salary** | Hard | [LC 1384 🔒](https://leetcode.com/problems/median-employee-salary/) | — |
-| 3 | **Hopper Company Queries I** | Hard | [LC 1635 🔒](https://leetcode.com/problems/hopper-company-queries-i/) | — |
-| 4 | **Hopper Company Queries II** | Hard | [LC 1645 🔒](https://leetcode.com/problems/hopper-company-queries-ii/) | — |
-| 5 | **Tree Node** | Medium | [LC 1651 🔒](https://leetcode.com/problems/tree-node/) | — |
-| 6 | **Leetflex Banned Accounts** | Medium | [LC 1767 🔒](https://leetcode.com/problems/leetflex-banned-accounts/) | — |
-| 7 | **Count Salary Categories** | Medium | [LC 2153 🔒](https://leetcode.com/problems/count-salary-categories/) | — |
-| 8 | Process Tasks Using Servers | Medium | [LC 1270 🔒](https://leetcode.com/problems/process-tasks-using-servers/) | — |
-| 9 | Find the Missing IDs | Medium | [LC 1613 🔒](https://leetcode.com/problems/find-the-missing-ids/) | — |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Process Tasks Using Servers | Medium | [LC 1270 🔒](https://leetcode.com/problems/process-tasks-using-servers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-process-tasks-using-servers) |
+| 2 | Find the Missing IDs | Medium | [LC 1613 🔒](https://leetcode.com/problems/find-the-missing-ids/) | [DataLemur 🔗](https://datalemur.com/questions/sql-find-the-missing-ids) |
+| 3 | **Find the Quiet Students in All Exams** | Hard | [LC 1336](https://leetcode.com/problems/find-the-quiet-students-in-all-exams/) | [DataLemur 🔗](https://datalemur.com/questions/sql-find-the-quiet-students-in-all-exams) |
+| 4 | **Hopper Company Queries I** | Hard | [LC 1635 🔒](https://leetcode.com/problems/hopper-company-queries-i/) | [DataLemur 🔗](https://datalemur.com/questions/sql-hopper-company-queries-i) |
+| 5 | **Hopper Company Queries II** | Hard | [LC 1645 🔒](https://leetcode.com/problems/hopper-company-queries-ii/) | [DataLemur 🔗](https://datalemur.com/questions/sql-hopper-company-queries-ii) |
 
 ---
 
@@ -1978,13 +1956,11 @@ GROUP BY id;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Students Report By Geography** | Hard | [LC 618 🔒](https://leetcode.com/problems/students-report-by-geography/) | [StrataScratch](https://platform.stratascratch.com/coding/10354-most-profitable-companies) |
-| 2 | **Rearrange Products Table** | Easy | [LC 2991](https://leetcode.com/problems/rearrange-products-table/) | — |
-| 3 | Product Sales Analysis III | Medium | [LC 1179 🔒](https://leetcode.com/problems/product-sales-analysis-iii/) | — |
-| 4 | Product Price at a Given Date | Medium | [LC 1393 🔒](https://leetcode.com/problems/product-price-at-a-given-date/) | — |
-| 5 | Tree Node | Medium | [LC 608](https://leetcode.com/problems/tree-node/) | [DataLemur](https://datalemur.com/questions/sql-tree-node) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Product Sales Analysis III | Medium | [LC 1179 🔒](https://leetcode.com/problems/product-sales-analysis-iii/) | [DataLemur 🔗](https://datalemur.com/questions/sql-product-sales-analysis-iii) |
+| 2 | Rearrange Products Table | Easy | [LC 2991](https://leetcode.com/problems/rearrange-products-table/) | [DataLemur 🔗](https://datalemur.com/questions/sql-rearrange-products-table) |
+| 3 | **Students Report By Geography** | Hard | [LC 618 🔒](https://leetcode.com/problems/students-report-by-geography/) | [DataLemur 🔗](https://datalemur.com/questions/sql-students-report-by-geography) |
 
 ---
 
@@ -2191,15 +2167,11 @@ GROUP BY DATE_FORMAT(trans_date, '%Y-%m'), country;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Game Play Analysis V** | Hard | [LC 1097 🔒](https://leetcode.com/problems/game-play-analysis-v/) | [StrataScratch](https://platform.stratascratch.com/coding/10322-finding-user-purchases) |
-| 2 | **Sales by Day of the Week** | Hard | [LC 1479 🔒](https://leetcode.com/problems/sales-by-day-of-the-week/) | [StrataScratch](https://platform.stratascratch.com/coding/10354-most-profitable-companies) |
-| 3 | **Count Salary Categories** | Medium | [LC 2993 🔒](https://leetcode.com/problems/count-salary-categories/) | — |
-| 4 | **Friday Purchases I** | Medium | [LC 2994 🔒](https://leetcode.com/problems/friday-purchases-i/) | — |
-| 5 | Rising Temperature | Easy | [LC 197](https://leetcode.com/problems/rising-temperature/) | [DataLemur](https://datalemur.com/questions/sql-rising-temperature) |
-| 6 | Monthly Transactions I | Medium | [LC 1193 🔒](https://leetcode.com/problems/monthly-transactions-i/) | — |
-| 7 | Restaurant Growth | Medium | [LC 1454 🔒](https://leetcode.com/problems/restaurant-growth/) | — |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Rising Temperature | Easy | [LC 197](https://leetcode.com/problems/rising-temperature/) | [DataLemur 🔗](https://datalemur.com/questions/sql-rising-temperature) |
+| 2 | Monthly Transactions I | Medium | [LC 1193 🔒](https://leetcode.com/problems/monthly-transactions-i/) | [DataLemur 🔗](https://datalemur.com/questions/sql-monthly-transactions-i) |
+| 3 | Restaurant Growth | Medium | [LC 1454 🔒](https://leetcode.com/problems/restaurant-growth/) | [DataLemur 🔗](https://datalemur.com/questions/sql-restaurant-growth) |
 
 ---
 
@@ -2271,12 +2243,11 @@ ORDER BY sell_date;
 
 ### 🔗 Practice Problems
 
-| # | Problem | Difficulty | Link | Alt |
-|---|---------|------------|------|-----|
-| 1 | **Invalid Tweets** | Easy | [LC 2118](https://leetcode.com/problems/invalid-tweets/) | — |
-| 2 | **Strong Friendship** | Medium | [LC 2199 🔒](https://leetcode.com/problems/strong-friendship/) | — |
-| 3 | **Rearrange Products Table** | Easy | [LC 2991](https://leetcode.com/problems/rearrange-products-table/) | — |
-| 4 | Group Sold Products By The Date | Easy | [LC 1484 🔒](https://leetcode.com/problems/group-sold-products-by-the-date/) | [DataLemur](https://datalemur.com/questions/sql-group-concat) |
+| # | Problem | Difficulty | Link | Free Practice |
+|---|---------|------------|------|-------------|
+| 1 | Group Sold Products By The Date | Easy | [LC 1484 🔒](https://leetcode.com/problems/group-sold-products-by-the-date/) | [DataLemur 🔗](https://datalemur.com/questions/sql-group-sold-products-by-the-date) |
+| 2 | Invalid Tweets | Easy | [LC 2118](https://leetcode.com/problems/invalid-tweets/) | [DataLemur 🔗](https://datalemur.com/questions/sql-invalid-tweets) |
+| 3 | Strong Friendship | Medium | [LC 2199 🔒](https://leetcode.com/problems/strong-friendship/) | [DataLemur 🔗](https://datalemur.com/questions/sql-strong-friendship) |
 
 ---
 
@@ -2935,12 +2906,28 @@ What does the problem ask for?
 
 ## 🎯 Bonus: Special Techniques
 
-| # | Problem | Pattern | Link |
-|---|---------|---------|------|
-| 1 | **Median Given Frequency of Numbers** | Median calculation with cumulative sums | [LC 571 🔒](https://leetcode.com/problems/median-given-frequency-of-numbers/) |
-| 2 | **Leetcodify Friends Recommendations** | Self-join + anti-join filtering | [LC 1917 🔒](https://leetcode.com/problems/leetcodify-friends-recommendations/) |
-| 3 | **Dynamic Pivoting of a Table** | Dynamic SQL + PIVOT | [LC 2252 🔒](https://leetcode.com/problems/dynamic-pivoting-of-a-table/) |
-| 4 | **Build a Matrix With Conditions** | Matrix construction with CTE + CASE | [LC 2253 🔒](https://leetcode.com/problems/build-a-matrix-with-conditions/) |
+| # | Problem | Pattern | Link | Free Practice |
+|---|---------|---------|------|-------------|
+| 1 | **Median Given Frequency of Numbers** | Median calculation with cumulative sums | [LC 571 🔒](https://leetcode.com/problems/median-given-frequency-of-numbers/) | [DataLemur 🔗](https://datalemur.com/questions/sql-median-given-frequency-of-numbers) |
+| 2 | **Leetcodify Friends Recommendations** | Self-join + anti-join filtering | [LC 1917 🔒](https://leetcode.com/problems/leetcodify-friends-recommendations/) | [DataLemur 🔗](https://datalemur.com/questions/sql-leetcodify-friends-recommendations) |
+| 3 | **Dynamic Pivoting of a Table** | Dynamic SQL + PIVOT | [LC 2252 🔒](https://leetcode.com/problems/dynamic-pivoting-of-a-table/) | [DataLemur 🔗](https://datalemur.com/questions/sql-dynamic-pivoting-of-a-table) |
+| 4 | **Build a Matrix With Conditions** | Matrix construction with CTE + CASE | [LC 2253 🔒](https://leetcode.com/problems/build-a-matrix-with-conditions/) | [DataLemur 🔗](https://datalemur.com/questions/sql-build-a-matrix-with-conditions) |
+| 5 | **Average Selling Price** | Medium / Removed from sections | [LC 1369 🔒](https://leetcode.com/problems/average-selling-price/) | [DataLemur 🔗](https://datalemur.com/questions/sql-average-selling-price) |
+| 6 | **Number of Comments per Post** | Easy / Removed from sections | [LC 1412 🔒](https://leetcode.com/problems/number-of-comments-per-post/) | [DataLemur 🔗](https://datalemur.com/questions/sql-number-of-comments-per-post) |
+| 7 | **New Users Daily Count** | Medium / Removed from sections | [LC 1972 🔒](https://leetcode.com/problems/new-users-daily-count/) | [DataLemur 🔗](https://datalemur.com/questions/sql-new-users-daily-count) |
+| 8 | **Steps to Make Array Non-decreasing** | Medium / Removed from sections | [LC 2362 🔒](https://leetcode.com/problems/steps-to-make-array-non-decreasing/) | [DataLemur 🔗](https://datalemur.com/questions/sql-steps-to-make-array-non-decreasing) |
+| 9 | **Number of Unique Categories** | Medium / Removed from sections | [LC 2720 🔒](https://leetcode.com/problems/number-of-unique-categories/) | [DataLemur 🔗](https://datalemur.com/questions/sql-number-of-unique-categories) |
+| 10 | **Count the Number of Good Partitions** | Hard / Removed from sections | [LC 2793 🔒](https://leetcode.com/problems/count-the-number-of-good-partitions/) | [DataLemur 🔗](https://datalemur.com/questions/sql-count-the-number-of-good-partitions) |
+| 11 | **Count of Interesting Subarrays** | Medium / Removed from sections | [LC 2995 🔒](https://leetcode.com/problems/count-of-interesting-subarrays/) | [DataLemur 🔗](https://datalemur.com/questions/sql-count-of-interesting-subarrays) |
+| 12 | Tree Node | Medium / Removed from sections | [LC 608](https://leetcode.com/problems/tree-node/) | [DataLemur 🔗](https://datalemur.com/questions/sql-tree-node) |
+| 13 | **Count Salary Categories** | Medium / Removed from sections | [LC 2993 🔒](https://leetcode.com/problems/count-salary-categories/) | [DataLemur 🔗](https://datalemur.com/questions/sql-count-salary-categories) |
+| 14 | **Longest Subsequence With Limited Sum** | Medium / Removed from sections | [LC 2173](https://leetcode.com/problems/longest-subsequence-with-limited-sum/) | [DataLemur 🔗](https://datalemur.com/questions/sql-longest-subsequence-with-limited-sum) |
+| 15 | **Consecutive Transactions** | Medium / Removed from sections | [LC 2752 🔒](https://leetcode.com/problems/consecutive-transactions/) | [DataLemur 🔗](https://datalemur.com/questions/sql-consecutive-transactions) |
+| 16 | **Leetflex Banned Accounts** | Medium / Removed from sections | [LC 1767 🔒](https://leetcode.com/problems/leetflex-banned-accounts/) | [DataLemur 🔗](https://datalemur.com/questions/sql-leetflex-banned-accounts) |
+| 17 | Product Price at a Given Date | Medium / Removed from sections | [LC 1393 🔒](https://leetcode.com/problems/product-price-at-a-given-date/) | [DataLemur 🔗](https://datalemur.com/questions/sql-product-price-at-a-given-date) |
+| 18 | **Friday Purchases I** | Medium / Removed from sections | [LC 2994 🔒](https://leetcode.com/problems/friday-purchases-i/) | [DataLemur 🔗](https://datalemur.com/questions/sql-friday-purchases-i) |
+
+
 
 ---
 
