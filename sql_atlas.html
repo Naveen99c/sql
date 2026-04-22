@@ -1,4 +1,1596 @@
-# PHASE 0 — The Mental Model
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The SQL Atlas — A Structured Journey</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root {
+    --ink: #0c1220;
+    --ink-soft: #111827;
+    --ink-line: #1c2540;
+    --parchment: #f3e6cf;
+    --parchment-dim: #d8c9ae;
+    --amber: #e5a63b;
+    --amber-hot: #f5c55e;
+    --teal: #67c9c0;
+    --rust: #d26a4d;
+    --muted: #8591a8;
+    --font-scale: 1;
+  }
+
+  * { -webkit-font-smoothing: antialiased; }
+
+  html, body {
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'Figtree', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    font-size: calc(16px * var(--font-scale));
+  }
+
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(229,166,59,0.06), transparent 60%),
+      radial-gradient(ellipse 70% 70% at 90% 100%, rgba(103,201,192,0.05), transparent 60%),
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px) 0 0 / 100% 32px,
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px) 0 0 / 32px 100%;
+  }
+
+  .serif { font-family: 'Fraunces', serif; font-variation-settings: "opsz" 144, "SOFT" 60; }
+  .mono  { font-family: 'JetBrains Mono', monospace; }
+
+  .headline {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 0.95;
+  }
+
+  .small-caps {
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  .rule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--amber) 20%, var(--amber) 80%, transparent);
+    opacity: 0.6;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(229,166,59,0.35);
+    color: var(--amber-hot);
+    background: rgba(229,166,59,0.06);
+    white-space: nowrap;
+  }
+  .chip.teal { border-color: rgba(103,201,192,0.35); color: var(--teal); background: rgba(103,201,192,0.06); }
+  .chip.rust { border-color: rgba(210,106,77,0.4); color: var(--rust); background: rgba(210,106,77,0.07); }
+  .chip.muted { border-color: rgba(133,145,168,0.3); color: var(--muted); background: rgba(133,145,168,0.04); }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reveal { animation: rise 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+  .marquee {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+    font-weight: 300;
+    font-style: italic;
+    color: rgba(243,230,207,0.22);
+    font-size: 10vw;
+    line-height: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  @keyframes scroll-x {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .marquee-inner {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scroll-x 50s linear infinite;
+  }
+
+  /* ============================================
+     SIDEBAR  — sticky tree TOC mirror
+     ============================================ */
+  .side {
+    position: sticky;
+    top: 1.25rem;
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .side-heading {
+    color: var(--muted);
+    padding: 0 10px;
+    margin: 1rem 0 0.4rem;
+  }
+  .sidetree details { margin: 0; }
+  .sidetree summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-left: 2px solid transparent;
+    transition: all 160ms ease;
+  }
+  .sidetree summary::-webkit-details-marker { display: none; }
+  .sidetree summary:hover { color: var(--parchment); border-left-color: var(--amber); background: rgba(229,166,59,0.04); }
+  .sidetree details[open] > summary { color: var(--amber-hot); }
+  .sidetree .caret { width: 10px; color: var(--muted); transition: transform 160ms ease; }
+  .sidetree details[open] > summary .caret { transform: rotate(90deg); color: var(--amber); }
+  .sidetree details details summary { font-size: 0.68rem; padding-left: 22px; }
+  .sidetree details details details summary { padding-left: 34px; font-size: 0.66rem; opacity: 0.9; }
+  .sidetree a {
+    display: block;
+    padding: 3px 10px 3px 34px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: var(--muted);
+    opacity: 0.85;
+  }
+  .sidetree a:hover { color: var(--amber); background: rgba(229,166,59,0.04); }
+  .sidetree a.active { color: var(--amber); background: rgba(229,166,59,0.08); }
+
+  /* ============================================
+     FACET FILTER bar
+     ============================================ */
+  .facets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .facet {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 2px;
+    border: 1px solid var(--ink-line);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .facet:hover { color: var(--parchment); border-color: var(--amber); }
+  .facet.active { background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight: 700; }
+
+  /* ============================================
+     SEARCH input + ⌘K palette
+     ============================================ */
+  .search {
+    background: rgba(12,18,32,0.6);
+    border: 1px solid var(--ink-line);
+    color: var(--parchment);
+    padding: 9px 14px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 200ms ease;
+  }
+  .search:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(229,166,59,0.08); }
+  .search::placeholder { color: var(--muted); }
+
+  .palette-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(6,10,20,0.8);
+    backdrop-filter: blur(6px);
+    z-index: 90;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+  }
+  .palette-backdrop.open { display: flex; }
+  .palette {
+    width: min(640px, 92vw);
+    background: var(--ink-soft);
+    border: 1px solid var(--amber);
+    border-radius: 4px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+  .palette input {
+    width: 100%;
+    background: transparent;
+    color: var(--parchment);
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    padding: 16px 20px;
+    outline: none;
+    border-bottom: 1px solid var(--ink-line);
+  }
+  .palette-list {
+    max-height: 48vh;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .palette-item {
+    padding: 8px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--parchment-dim);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+  }
+  .palette-item .kind {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+    width: 56px;
+  }
+  .palette-item.active, .palette-item:hover {
+    background: rgba(229,166,59,0.1);
+    color: var(--amber-hot);
+  }
+
+  /* ============================================
+     PROGRESS RING
+     ============================================ */
+  .ring { transform: rotate(-90deg); }
+  .ring-bg { stroke: var(--ink-line); }
+  .ring-fg { stroke: var(--amber); stroke-linecap: round; transition: stroke-dashoffset 500ms ease; }
+
+  /* Reading progress bar */
+  .readbar {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: linear-gradient(to right, var(--amber), var(--rust));
+    z-index: 50; transition: width 120ms ease;
+  }
+
+  /* ============================================
+     RESUME CARD
+     ============================================ */
+  .resume {
+    background: linear-gradient(180deg, rgba(229,166,59,0.07), rgba(229,166,59,0.02));
+    border: 1px solid rgba(229,166,59,0.3);
+    border-left: 3px solid var(--amber);
+    border-radius: 3px;
+    padding: 14px 18px;
+    display: flex; gap: 14px; align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .resume-icon { font-size: 1.4rem; color: var(--amber); }
+  .resume-body { flex: 1; }
+  .resume-label { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
+  .resume-target { font-family: 'Fraunces', serif; font-size: 1.05rem; color: var(--parchment); margin-top: 2px; }
+
+  /* ============================================
+     GUIDE  — renders from embedded MD into a collapsible tree
+     ============================================ */
+  .guide { color: var(--parchment-dim); font-size: 1rem; line-height: 1.75; }
+  .guide p { margin: 0.9rem 0; max-width: 70ch; }
+
+  .guide h1, .guide h2, .guide h3, .guide h4, .guide h5 {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 90;
+    font-weight: 400;
+    letter-spacing: -0.022em;
+    color: var(--parchment);
+    scroll-margin-top: 1.5rem;
+    margin: 0;
+  }
+
+  /* ========= Disclosure tree =========
+     Three levels: .phase-node > .section-node > .subnode */
+  .phase-node, .section-node, .subnode {
+    position: relative;
+    margin: 0;
+  }
+  /* Force-hide body when closed — Chrome's ::details-content is unreliable. */
+  details:not([open]) > .phase-body,
+  details:not([open]) > .section-body,
+  details:not([open]) > .subnode-body,
+  details:not([open]) > .guide-body,
+  details:not([open]) > .guide-body-inline {
+    display: none !important;
+  }
+  .phase-node {
+    border-top: 1px solid var(--ink-line);
+    padding: 0.4rem 0;
+  }
+  .phase-node:last-child { border-bottom: 1px solid var(--ink-line); }
+
+  .phase-node > summary,
+  .section-node > summary,
+  .subnode > summary {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1.6rem 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    transition: background 160ms ease;
+  }
+  .phase-node > summary::-webkit-details-marker,
+  .section-node > summary::-webkit-details-marker,
+  .subnode > summary::-webkit-details-marker { display: none; }
+
+  .phase-node > summary:hover,
+  .section-node > summary:hover,
+  .subnode > summary:hover { background: rgba(229,166,59,0.03); }
+
+  .caret-tri {
+    display: inline-block;
+    width: 0; height: 0;
+    border: 5px solid transparent;
+    border-left-color: var(--muted);
+    transition: transform 200ms ease;
+    transform-origin: 3px 5px;
+  }
+  details[open] > summary .caret-tri { transform: rotate(90deg); border-left-color: var(--amber); }
+
+  .phase-node > summary .phase-num {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+    font-weight: 300;
+    font-size: 2.6rem;
+    line-height: 0.85;
+    color: var(--amber);
+    opacity: 0.9;
+    min-width: 3rem;
+    text-shadow: 0 0 28px rgba(229,166,59,0.3);
+  }
+  .phase-node > summary .phase-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.7rem;
+    letter-spacing: -0.02em;
+    color: var(--parchment);
+  }
+  .phase-node > summary .phase-sub {
+    display: block;
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.86rem;
+    color: var(--muted);
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  .phase-body {
+    padding: 0.6rem 0 1.8rem 3.4rem;
+    border-left: 1px solid rgba(229,166,59,0.16);
+    margin-left: 0.8rem;
+  }
+
+  /* Preamble (doc H1) — smaller, non-numbered, teal accent instead of amber */
+  .phase-node.phase-preamble > summary {
+    padding-top: 1rem;
+    padding-bottom: 0.6rem;
+  }
+  .phase-node.phase-preamble > summary .preamble-mark {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--teal);
+    opacity: 0.7;
+    min-width: 1.6rem;
+    text-align: center;
+  }
+  .phase-node.phase-preamble > summary .phase-title {
+    font-size: 1.15rem;
+    color: var(--parchment);
+    opacity: 0.92;
+    letter-spacing: 0;
+  }
+  .phase-node.phase-preamble > summary .phase-sub {
+    font-size: 0.76rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-style: normal;
+    color: var(--teal);
+    opacity: 0.65;
+  }
+  .phase-node.phase-preamble > .phase-body {
+    border-left-color: rgba(103, 201, 192, 0.22);
+  }
+
+  .section-node {
+    border-top: 1px dashed rgba(28, 37, 64, 0.8);
+  }
+  .section-node:first-child { border-top: none; }
+  .section-node > summary .sec-mark {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--teal);
+    font-size: 0.86rem;
+    font-style: italic;
+    opacity: 0.9;
+    min-width: 3rem;
+  }
+  .section-node > summary .sec-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    color: var(--parchment);
+  }
+  .section-node > summary .sec-sub {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .section-body {
+    padding: 0.2rem 0 1rem 3rem;
+    border-left: 1px solid rgba(103,201,192,0.12);
+    margin-left: 0.4rem;
+  }
+
+  .subnode > summary .sub-glyph {
+    color: var(--amber);
+    opacity: 0.55;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    min-width: 1.6rem;
+  }
+  .subnode > summary .sub-title {
+    font-family: 'Figtree', sans-serif;
+    font-weight: 500;
+    font-size: 0.98rem;
+    color: var(--parchment);
+  }
+  .subnode-body {
+    padding: 0.3rem 0 0.8rem 2.2rem;
+  }
+
+  summary .meta {
+    display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* status dot */
+  .status { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; margin-right: 4px; }
+  .status.todo { color: var(--muted); }
+  .status.att  { color: var(--amber); }
+  .status.pass { color: var(--teal); }
+
+  /* difficulty chip colour map */
+  .chip.diff-Easy   { border-color: rgba(103,201,192,0.45); color: var(--teal);  background: rgba(103,201,192,0.08); }
+  .chip.diff-Medium { border-color: rgba(229,166,59,0.45);  color: var(--amber-hot); background: rgba(229,166,59,0.08); }
+  .chip.diff-Hard   { border-color: rgba(210,106,77,0.5);   color: var(--rust);  background: rgba(210,106,77,0.1); }
+
+  /* Inline MD styling inside guide bodies */
+  .guide-body {
+    padding-top: 0.4rem;
+    animation: rise 260ms ease;
+  }
+  .guide-body p { margin: 0.8rem 0; max-width: 72ch; }
+  .guide-body strong { color: var(--parchment); font-weight: 600; }
+  .guide-body em { color: var(--parchment); font-style: italic; font-family: 'Fraunces', serif; }
+  .guide-body h4 { font-size: 1rem; margin: 1.2rem 0 0.4rem; color: var(--teal); font-style: italic; }
+  .guide-body h5 {
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.74rem;
+    color: var(--amber);
+    margin: 1rem 0 0.3rem;
+  }
+  .guide-body ul, .guide-body ol { margin: 0.6rem 0 1rem; padding-left: 1.2rem; max-width: 72ch; }
+  .guide-body ul { list-style: none; }
+  .guide-body ul > li { position: relative; padding-left: 1rem; margin: 0.25rem 0; }
+  .guide-body ul > li::before {
+    content: "◆";
+    position: absolute; left: 0; top: 0;
+    color: var(--amber);
+    font-size: 0.58rem;
+    line-height: 1.85;
+    opacity: 0.7;
+  }
+  .guide-body ol { list-style: none; counter-reset: ol; }
+  .guide-body ol > li { counter-increment: ol; position: relative; padding-left: 1.7rem; margin: 0.25rem 0; }
+  .guide-body ol > li::before {
+    content: counter(ol);
+    position: absolute; left: 0; top: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--amber);
+    font-weight: 600;
+  }
+  .guide-body hr {
+    margin: 2rem 0; border: none; height: 1px;
+    background: linear-gradient(to right, transparent, var(--ink-line) 20%, var(--ink-line) 80%, transparent);
+  }
+  .guide-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.84em;
+    background: rgba(229,166,59,0.08);
+    color: var(--amber-hot);
+    padding: 1px 6px;
+    border-radius: 2px;
+    border: 1px solid rgba(229,166,59,0.12);
+  }
+  .guide-body pre {
+    position: relative;
+    background: #060a14;
+    border: 1px solid var(--ink-line);
+    border-left: 3px solid var(--amber);
+    border-radius: 3px;
+    padding: 14px 18px;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--parchment);
+  }
+  .guide-body pre code { background: transparent; border: none; color: inherit; padding: 0; font-size: inherit; }
+  .guide-body pre .kw  { color: var(--amber-hot); font-weight: 700; }
+  .guide-body pre .fn  { color: var(--teal); }
+  .guide-body pre .com { color: var(--muted); font-style: italic; }
+  .guide-body pre .str { color: #b8e5df; }
+  .guide-body pre .num { color: var(--rust); }
+
+  /* copy button on code blocks */
+  .copy-btn {
+    position: absolute; top: 6px; right: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(12,18,32,0.8);
+    border: 1px solid var(--ink-line);
+    padding: 3px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 160ms ease, color 160ms ease;
+  }
+  .guide-body pre:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--amber); border-color: var(--amber); }
+
+  .guide-body blockquote {
+    margin: 1rem 0;
+    padding: 0.6rem 1.1rem;
+    border-left: 3px solid var(--teal);
+    background: rgba(103,201,192,0.05);
+    color: var(--parchment);
+    font-style: italic;
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+  }
+  .guide-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.1rem 0;
+    font-size: 0.88rem;
+  }
+  .guide-body thead { background: rgba(229,166,59,0.06); }
+  .guide-body th {
+    text-align: left;
+    padding: 9px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--amber);
+    border-bottom: 1px solid var(--ink-line);
+  }
+  .guide-body td {
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(28, 37, 64, 0.6);
+    color: var(--parchment-dim);
+    vertical-align: top;
+  }
+  .guide-body tr:hover td { background: rgba(229,166,59,0.03); }
+
+  .guide-body a.practice-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--amber);
+    color: var(--ink) !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 4px 10px;
+    border-radius: 2px;
+    text-decoration: none !important;
+    transition: all 180ms ease;
+  }
+  .guide-body a.practice-pill:hover {
+    background: var(--amber-hot);
+    box-shadow: 0 4px 14px -4px rgba(229,166,59,0.5);
+    transform: translateY(-1px);
+  }
+  /* per-pill status dot */
+  .guide-body a.practice-pill .pill-dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 1px rgba(12,18,32,0.35) inset;
+  }
+  .pill-dot.todo { background: rgba(12,18,32,0.35); }
+  .pill-dot.att  { background: #e5a63b; box-shadow: 0 0 6px rgba(229,166,59,0.7); }
+  .pill-dot.pass { background: #67c9c0; box-shadow: 0 0 8px rgba(103,201,192,0.8); }
+  /* deep-link flash on ?jump=<slug> */
+  @keyframes pillFlash {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229,166,59,0); transform: none; }
+    20%      { box-shadow: 0 0 0 6px rgba(229,166,59,0.4); transform: translateY(-1px); }
+  }
+  .guide-body a.practice-pill.pill-flash { animation: pillFlash 1.6s ease-out; }
+  /* row accent — subtly tints the row of a solved problem */
+  .guide-body tr[data-status="passed"] td { background: rgba(103,201,192,0.05); }
+  .guide-body tr[data-status="attempted"] td { background: rgba(229,166,59,0.035); }
+  .guide-body a.xref {
+    color: var(--teal);
+    text-decoration: underline;
+    text-decoration-color: rgba(103,201,192,0.35);
+    text-underline-offset: 3px;
+  }
+  .guide-body a.xref:hover { color: var(--amber-hot); text-decoration-color: var(--amber); }
+
+  /* dimmed for facet filter */
+  .tree-dim > summary { opacity: 0.28; filter: grayscale(0.3); }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--ink); }
+  ::-webkit-scrollbar-thumb { background: var(--ink-line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--amber); }
+
+  /* print */
+  @media print {
+    .side, .readbar, .palette-backdrop, .marquee, .facets, .search-row, footer, .copy-btn { display: none !important; }
+    details { page-break-inside: avoid; }
+    details > * { display: block !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  footer {
+    border-top: 1px solid var(--ink-line);
+    margin-top: 5rem;
+    padding: 3rem 0 4rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+
+<body class="relative z-10">
+
+<div class="readbar" id="readbar" style="width:0%"></div>
+
+<!-- ================= HERO ================= -->
+<header class="relative overflow-hidden pt-20 pb-10 md:pb-14">
+  <div class="marquee absolute left-0 right-0 top-6 pointer-events-none select-none">
+    <span class="marquee-inner">CTE · WINDOW · LAG · LEAD · GROUP&nbsp;BY · HAVING · ROW_NUMBER · RANK · DENSE_RANK · SELF&nbsp;JOIN · ANTI&nbsp;JOIN · PIVOT · SESSIONIZATION · GAPS&nbsp;&amp;&nbsp;ISLANDS · CTE · WINDOW · LAG · LEAD · GROUP&nbsp;BY · HAVING · ROW_NUMBER · RANK · DENSE_RANK · SELF&nbsp;JOIN · ANTI&nbsp;JOIN · PIVOT · SESSIONIZATION · GAPS&nbsp;&amp;&nbsp;ISLANDS&nbsp;·&nbsp;</span>
+  </div>
+  <div class="max-w-6xl mx-auto px-6 relative">
+    <div class="small-caps text-amber-400 mb-6 reveal" style="animation-delay:.05s">Volume I · Twenty-Twenty-Six Edition</div>
+    <h1 class="headline text-6xl md:text-8xl leading-[0.9] mb-8 reveal" style="animation-delay:.15s">
+      The <em style="color:var(--amber);font-style:italic;">SQL</em> Atlas
+    </h1>
+    <p class="serif italic text-xl md:text-2xl max-w-2xl text-[color:var(--parchment-dim)] mb-10 reveal" style="animation-delay:.25s">
+      A cartography of seven phases — from the logical order of execution to recursive CTEs — with fifty-eight hand-graded problems that you solve in the browser.
+    </p>
+    <div class="flex flex-wrap gap-3 reveal" style="animation-delay:.35s">
+      <span class="chip">7 Phases</span>
+      <span class="chip teal">58 Problems</span>
+      <span class="chip rust">Hidden Edge-Case Validator</span>
+      <span class="chip muted">⌘K to search · ?j for next section</span>
+    </div>
+    <div class="rule mt-14"></div>
+  </div>
+</header>
+
+<!-- ================= MAIN LAYOUT ================= -->
+<main class="max-w-6xl mx-auto px-6 pb-20 grid md:grid-cols-[240px_1fr] gap-10 relative">
+
+  <!-- Sticky sidebar: tree TOC mirror -->
+  <aside class="hidden md:block">
+    <div class="side">
+      <div class="small-caps side-heading">Progress</div>
+      <div class="flex items-center gap-3 px-3">
+        <svg width="52" height="52" class="ring">
+          <circle cx="26" cy="26" r="22" fill="none" stroke-width="3" class="ring-bg"></circle>
+          <circle cx="26" cy="26" r="22" fill="none" stroke-width="3" class="ring-fg"
+            stroke-dasharray="138.2" stroke-dashoffset="138.2" id="ringFg"></circle>
+        </svg>
+        <div>
+          <div class="mono text-lg"><span id="progPct">0</span>%</div>
+          <div class="text-xs text-[color:var(--muted)]"><span id="progCount">0</span> / <span id="progTotal">58</span> solved</div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 px-3 mt-3">
+        <button id="expandAll" class="facet">Expand</button>
+        <button id="collapseAll" class="facet">Collapse</button>
+        <button id="resetProg" class="facet">Reset</button>
+      </div>
+
+      <div class="small-caps side-heading mt-6">Contents</div>
+      <nav id="sidetree" class="sidetree" role="tree"></nav>
+    </div>
+  </aside>
+
+  <!-- Content column -->
+  <section>
+    <!-- Search + facets -->
+    <div class="search-row flex flex-col md:flex-row gap-3 mb-5 reveal items-stretch md:items-center" style="animation-delay:.4s">
+      <input id="search" class="search flex-1" placeholder="› Filter tree — or press ⌘K for jump palette" />
+      <button id="paletteOpen" class="facet" style="padding:9px 14px">⌘K</button>
+    </div>
+
+    <div class="facets mb-3 reveal" style="animation-delay:.45s" id="facetBar">
+      <button class="facet active" data-facet="all">All</button>
+      <button class="facet" data-facet="diff:Easy">Easy</button>
+      <button class="facet" data-facet="diff:Medium">Medium</button>
+      <button class="facet" data-facet="diff:Hard">Hard</button>
+      <button class="facet" data-facet="status:todo">Not started</button>
+      <button class="facet" data-facet="status:att">Attempted</button>
+      <button class="facet" data-facet="status:pass">Passed</button>
+    </div>
+
+    <!-- Resume card slot -->
+    <div id="resumeSlot"></div>
+
+    <!-- THE GUIDE (tree) -->
+    <article id="guide" class="guide" role="tree"></article>
+
+    <!-- Interview pacing (kept as product surface) -->
+    <section class="mt-16 reveal">
+      <div class="small-caps text-[color:var(--rust)] mb-3">Interview Dossier</div>
+      <h2 class="headline text-3xl md:text-4xl mb-6">Pacing Targets</h2>
+      <div style="border:1px solid rgba(210,106,77,0.25); border-radius: 4px; background: linear-gradient(180deg, rgba(210,106,77,0.07), transparent);">
+        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
+          <span class="chip diff-Easy">Easy</span>
+          <span class="serif text-lg">Read · Plan · Write · Verify</span>
+          <span class="mono text-[color:var(--teal)] text-sm">≤ 10 min</span>
+        </div>
+        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
+          <span class="chip diff-Medium">Medium</span>
+          <span class="serif text-lg">Identify pattern · Decompose · CTE or Window · Verify</span>
+          <span class="mono text-[color:var(--amber)] text-sm">≤ 20 min</span>
+        </div>
+        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center">
+          <span class="chip diff-Hard">Hard</span>
+          <span class="serif text-lg">Sketch approach · Handle edges · Multi-CTE or recursion</span>
+          <span class="mono text-[color:var(--rust)] text-sm">≤ 30 min</span>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<!-- ⌘K palette -->
+<div class="palette-backdrop" id="palette">
+  <div class="palette" role="dialog" aria-label="Jump palette">
+    <input id="paletteInput" placeholder="Type a phase, section, pattern, or problem…" autocomplete="off" />
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<footer class="text-center">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="rule mb-10 opacity-40"></div>
+    <p class="serif italic text-xl mb-3">&ldquo;A query is a compass. The schema is the terrain.&rdquo;</p>
+    <p class="small-caps text-[color:var(--muted)]">Sandbox &middot; Fifty-eight problems &middot; SQLite-WASM in your browser</p>
+    <p class="mono text-[0.7rem] text-[color:var(--muted)] mt-6 uppercase tracking-widest">
+      🌀 Compiled &amp; Cartographed locally &middot; No telemetry &middot; No server
+    </p>
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function slugify(s) {
+  return (s || "").toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function highlightSQL(code) {
+  const KW = /\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|JOIN|LEFT|RIGHT|FULL|INNER|OUTER|CROSS|LATERAL|ON|AS|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|CASE|WHEN|THEN|ELSE|END|WITH|RECURSIVE|UNION|ALL|INTERSECT|EXCEPT|DISTINCT|OVER|PARTITION|ROWS|RANGE|PRECEDING|FOLLOWING|CURRENT|ROW|UNBOUNDED|INSERT|UPDATE|DELETE|SET|VALUES|INTO|CREATE|TABLE|INDEX|DROP|ALTER|TRUNCATE|BEGIN|COMMIT|ROLLBACK|TRANSACTION|IF|DECLARE|RETURN|GRANT|REVOKE|VIEW|TRIGGER|PROCEDURE|FUNCTION|CAST|COALESCE|EXTRACT|INTERVAL|DATE|TIMESTAMP|BOOLEAN|INT|INTEGER|BIGINT|VARCHAR|TEXT|DECIMAL|NUMERIC|FLOAT|DOUBLE|ASC|DESC|NULLS|FIRST|LAST|USING|FILTER|WITHIN|GROUPING)\b/gi;
+  const FN = /\b(COUNT|SUM|AVG|MIN|MAX|ROW_NUMBER|RANK|DENSE_RANK|NTILE|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTH_VALUE|CUME_DIST|PERCENT_RANK|NOW|CURDATE|CURRENT_DATE|CURRENT_TIMESTAMP|DATEDIFF|DATE_ADD|DATE_SUB|TIMESTAMPDIFF|STR_TO_DATE|DATE_FORMAT|TO_CHAR|TO_DATE|SUBSTRING|SUBSTR|LENGTH|CHAR_LENGTH|CONCAT|CONCAT_WS|UPPER|LOWER|TRIM|REPLACE|REGEXP_REPLACE|REGEXP_MATCH|ROUND|FLOOR|CEIL|CEILING|ABS|MOD|POWER|GROUP_CONCAT|STRING_AGG|ARRAY_AGG|JSON_EXTRACT|JSON_ARRAY|JSON_OBJECT|JSON_VALUE|IFNULL|NULLIF|GREATEST|LEAST|ISNULL|EXP|LN|LOG|SIGN|SQRT)\b/gi;
+  return code
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/--[^\n]*/g, m => `<span class="com">${m}</span>`)
+    .replace(/\/\*[\s\S]*?\*\//g, m => `<span class="com">${m}</span>`)
+    .replace(/'[^']*'/g, m => `<span class="str">${m}</span>`)
+    .replace(/\b\d+(?:\.\d+)?\b/g, m => `<span class="num">${m}</span>`)
+    .replace(FN, m => `<span class="fn">${m}</span>`)
+    .replace(KW, m => `<span class="kw">${m.toUpperCase()}</span>`);
+}
+
+/* =====================================================================
+   STATUS + PROGRESS (localStorage bridge with sandbox)
+   Keys:
+     atlas.status.<slug> = "attempted" | "passed"
+     atlas.fontScale     = number (font-size multiplier)
+   ===================================================================== */
+function getStatus(slug) {
+  return localStorage.getItem(`atlas.status.${slug}`) || "todo";
+}
+function setStatus(slug, v) {
+  localStorage.setItem(`atlas.status.${slug}`, v);
+}
+
+/* paint the small status dot inside each ▶ Practice pill */
+function paintPillStatuses(root = document) {
+  root.querySelectorAll(".pill-dot[data-dot-slug]").forEach(d => {
+    const slug = d.dataset.dotSlug;
+    const s = getStatus(slug);
+    d.className = "pill-dot " + (s === "passed" ? "pass" : s === "attempted" ? "att" : "todo");
+    d.setAttribute("aria-hidden", "true");
+    // tooltip on the PARENT pill instead (so screen readers read it once)
+    const pill = d.closest("a.practice-pill");
+    if (pill) pill.setAttribute("aria-label", `${s === "passed" ? "Solved" : s === "attempted" ? "Attempted" : "Practice"}: ${slug}`);
+  });
+  // also mark each practice-pill's row for CSS purposes
+  root.querySelectorAll("a.practice-pill").forEach(a => {
+    const tr = a.closest("tr");
+    if (!tr) return;
+    tr.dataset.status = getStatus(a.dataset.slug);
+  });
+}
+
+/* =====================================================================
+   PATTERN DETECTION — inspects section heading text + body to tag chips
+   ===================================================================== */
+const PATTERN_RULES = [
+  [/anti[- ]?join/i,      "Anti-Join"],
+  [/semi[- ]?join/i,      "Semi-Join"],
+  [/self[- ]?join/i,      "Self-Join"],
+  [/recursive|recursion/i,"Recursive CTE"],
+  [/window|row_number|rank\b|lag|lead|partition/i, "Window"],
+  [/pivot|unpivot/i,      "Pivot"],
+  [/gaps?\s*(and|&)?\s*islands?/i, "Gaps & Islands"],
+  [/session(iz|is)/i,     "Sessionization"],
+  [/year[- ]?over[- ]?year|yoy|month[- ]?over/i, "YoY"],
+  [/subquery|CTE/i,       "CTE"],
+  [/group\s*by|HAVING/i,  "Group-By"],
+  [/null/i,               "NULL"],
+  [/cast|conversion/i,    "Casting"],
+  [/DATE|time/i,          "Date"],
+  [/JSON|array/i,         "JSON/Array"],
+  [/index|EXPLAIN|sarg/i, "Performance"],
+  [/transaction|DML|procedure|view/i, "Server-Side"],
+];
+function detectPatterns(text) {
+  const hits = new Set();
+  for (const [re, label] of PATTERN_RULES) {
+    if (re.test(text)) hits.add(label);
+  }
+  return [...hits];
+}
+
+/* =====================================================================
+   PHASE BLURBS (one-line teasers)
+   ===================================================================== */
+const PHASE_BLURBS = {
+  "Phase 0": "Logical order, NULLs, casting, CASE — the mental model SQL runs on.",
+  "Phase 1": "Types, constraints, normalization, engine quirks — know the table before the query.",
+  "Phase 2": "GROUP BY, CTEs, JOINs, Anti/Semi-joins — the standard-query toolbox.",
+  "Phase 3": "RANK · LAG · LEAD · Frames — turn rows into analytics.",
+  "Phase 4": "Gaps & Islands, Intervals, Recursion, Pivot, YoY — the hard tier.",
+  "Phase 5": "Date, String, JSON, Array — fluent across every data type.",
+  "Phase 6": "Indexes, EXPLAIN, Sargability, DML, Views — production-quality SQL.",
+};
+
+function phaseBlurb(title) {
+  const m = title.match(/^Phase\s+(\d+)/i);
+  if (m) return PHASE_BLURBS[`Phase ${m[1]}`] || "";
+  return "";
+}
+
+/* =====================================================================
+   TREE RENDERER — turn flat markdown DOM into nested <details>
+   ===================================================================== */
+function buildTree(root) {
+  // Pull all direct children into an array
+  const flat = [...root.children];
+  root.innerHTML = "";
+
+  // Group: iterate, collect by level
+  let phaseNode = null, phaseBody = null;
+  let sectionNode = null, sectionBody = null;
+  let subNode = null, subBody = null;
+  const all = [];
+
+  function openPhase(h1) {
+    phaseNode = document.createElement("details");
+    phaseNode.className = "phase-node";
+    phaseNode.dataset.level = "1";
+    const sum = document.createElement("summary");
+    const title = h1.textContent.trim();
+    const m = title.match(/^Phase\s+(\d+)\s*[—–-]?\s*(.*)/i);
+    const isPhase = !!m;
+    const num = m ? m[1] : "";
+    const rest = m ? m[2] : title;
+    // any H1 that is NOT "Phase N — …" gets preamble treatment
+    if (!isPhase) {
+      phaseNode.classList.add("phase-preamble");
+      phaseNode.open = true; // preamble is always open by default
+      sum.innerHTML = `
+        <span class="caret-tri"></span>
+        <span style="display:flex;align-items:center;gap:14px;">
+          <span class="preamble-mark">¶</span>
+          <span>
+            <span class="phase-title">${rest}</span>
+            <span class="phase-sub">Doc preface · Legend · Navigation</span>
+          </span>
+        </span>
+        <span class="meta"></span>
+      `;
+    } else {
+      sum.innerHTML = `
+        <span class="caret-tri"></span>
+        <span style="display:flex;align-items:center;gap:18px;">
+          <span class="phase-num">${num}</span>
+          <span>
+            <span class="phase-title">${rest}</span>
+            <span class="phase-sub">${phaseBlurb(title)}</span>
+          </span>
+        </span>
+        <span class="meta"></span>
+      `;
+    }
+    phaseNode.appendChild(sum);
+    phaseBody = document.createElement("div");
+    phaseBody.className = "phase-body";
+    phaseNode.appendChild(phaseBody);
+    phaseNode.id = slugify(title);
+    phaseNode.dataset.title = title;
+    root.appendChild(phaseNode);
+    sectionNode = sectionBody = null;
+    subNode = subBody = null;
+    all.push(phaseNode);
+  }
+
+  function openSection(h2) {
+    if (!phaseBody) {
+      // orphan h2 (e.g. "How to Use This Guide"): give it a synthetic phase
+      openPhase({ textContent: "Preface" });
+    }
+    sectionNode = document.createElement("details");
+    sectionNode.className = "section-node";
+    sectionNode.dataset.level = "2";
+    const sum = document.createElement("summary");
+    const title = h2.textContent.trim();
+    const m = title.match(/^(\d+\.\d+)\s+(.*)$/);
+    const mark = m ? `§${m[1]}` : "§";
+    const rest = m ? m[2] : title;
+    sum.innerHTML = `
+      <span class="caret-tri"></span>
+      <span style="display:flex;align-items:center;gap:14px;">
+        <span class="sec-mark">${mark}</span>
+        <span>
+          <span class="sec-title">${rest}</span>
+          <span class="sec-sub"></span>
+        </span>
+      </span>
+      <span class="meta"></span>
+    `;
+    sectionNode.appendChild(sum);
+    sectionBody = document.createElement("div");
+    sectionBody.className = "section-body";
+    sectionNode.appendChild(sectionBody);
+    sectionNode.id = slugify(title);
+    sectionNode.dataset.title = title;
+    phaseBody.appendChild(sectionNode);
+    subNode = subBody = null;
+    all.push(sectionNode);
+  }
+
+  function openSub(h3) {
+    if (!sectionBody) {
+      // orphan h3 → push into current phase (or synthetic section)
+      if (!phaseBody) openPhase({ textContent: "Preface" });
+      openSection({ textContent: "Details" });
+    }
+    subNode = document.createElement("details");
+    subNode.className = "subnode";
+    subNode.dataset.level = "3";
+    const sum = document.createElement("summary");
+    const title = h3.textContent.trim();
+    sum.innerHTML = `
+      <span class="caret-tri"></span>
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="sub-glyph">▸</span>
+        <span class="sub-title">${title}</span>
+      </span>
+      <span class="meta"></span>
+    `;
+    subNode.appendChild(sum);
+    subBody = document.createElement("div");
+    subBody.className = "subnode-body guide-body";
+    subNode.appendChild(subBody);
+    subNode.id = slugify(title);
+    subNode.dataset.title = title;
+    sectionBody.appendChild(subNode);
+    all.push(subNode);
+  }
+
+  function appendBody(node) {
+    // route to innermost open container
+    if (subBody) { subBody.appendChild(node); return; }
+    if (sectionBody) {
+      // wrap in a guide-body if not already
+      let gb = sectionBody.lastElementChild;
+      if (!gb || !gb.classList?.contains("guide-body-inline")) {
+        gb = document.createElement("div");
+        gb.className = "guide-body guide-body-inline";
+        sectionBody.appendChild(gb);
+      }
+      gb.appendChild(node);
+      return;
+    }
+    if (phaseBody) {
+      let gb = phaseBody.lastElementChild;
+      if (!gb || !gb.classList?.contains("guide-body-inline")) {
+        gb = document.createElement("div");
+        gb.className = "guide-body guide-body-inline";
+        phaseBody.appendChild(gb);
+      }
+      gb.appendChild(node);
+      return;
+    }
+    // preamble before any phase: attach to root itself as a lead-in
+    root.appendChild(node);
+  }
+
+  for (const el of flat) {
+    const tag = el.tagName;
+    if (tag === "H1") openPhase(el);
+    else if (tag === "H2") openSection(el);
+    else if (tag === "H3") openSub(el);
+    else appendBody(el);
+  }
+  return all;
+}
+
+/* =====================================================================
+   DECORATE: links, code highlight, copy buttons, meta chips per node
+   ===================================================================== */
+function decorate(root) {
+  // links — only in-browser practice anymore
+  root.querySelectorAll("a").forEach(a => {
+    const href = a.getAttribute("href") || "";
+    const txt = a.textContent.trim();
+    if (href.startsWith("sql_sandbox.html?slug=")) {
+      const slug = href.match(/slug=([a-z0-9-]+)/)?.[1];
+      a.classList.add("practice-pill");
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener");
+      a.dataset.slug = slug || "";
+      a.innerHTML = `<span class="pill-dot" data-dot-slug="${slug}"></span>▶ Practice`;
+    } else if (href.startsWith("#")) {
+      a.classList.add("xref");
+    }
+  });
+  paintPillStatuses(root);
+
+  // code highlight
+  root.querySelectorAll("pre > code").forEach(c => {
+    const lang = (c.className.match(/language-(\w+)/) || [])[1];
+    if (!lang || /^sql$/i.test(lang)) {
+      c.innerHTML = highlightSQL(c.textContent);
+    }
+    // copy button
+    const pre = c.parentElement;
+    if (pre && !pre.querySelector(".copy-btn")) {
+      const btn = document.createElement("button");
+      btn.className = "copy-btn";
+      btn.textContent = "Copy";
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await navigator.clipboard.writeText(c.textContent);
+        btn.textContent = "Copied";
+        setTimeout(() => btn.textContent = "Copy", 1400);
+      });
+      pre.appendChild(btn);
+    }
+  });
+}
+
+/* =====================================================================
+   COMPUTE + PAINT meta chips (difficulty, pattern, count, status) on every summary
+   ===================================================================== */
+const NODE_INDEX = []; // { id, title, level, practiceSlugs[], patterns[], difficulty }
+
+function computeAndPaintMeta(nodes) {
+  for (const node of nodes) {
+    const meta = node.querySelector(":scope > summary .meta");
+    if (!meta) continue;
+    const title = node.dataset.title || "";
+    const level = parseInt(node.dataset.level || "0");
+    const isPreamble = node.classList.contains("phase-preamble");
+    const bodyText = node.textContent || "";
+
+    // collect practice slugs underneath
+    const practiceLinks = node.querySelectorAll("a.practice-pill");
+    const practiceSlugs = [...practiceLinks].map(a => a.dataset.slug).filter(Boolean);
+    const uniq = [...new Set(practiceSlugs)];
+
+    // patterns — detect from title + prose, return top matches
+    const patterns = detectPatterns(title + " " + bodyText.slice(0, 2000));
+
+    // difficulty histogram — count ONLY rows that also carry a practice link,
+    // so the legend/pacing tables don't leak Easy/Medium/Hard into phase chips.
+    let easy = 0, med = 0, hard = 0;
+    node.querySelectorAll("table tbody tr").forEach(tr => {
+      if (!tr.querySelector("a.practice-pill")) return;
+      for (const td of tr.querySelectorAll("td")) {
+        const t = td.textContent.trim();
+        if (t === "Easy") easy++;
+        else if (t === "Medium") med++;
+        else if (t === "Hard") hard++;
+      }
+    });
+    const total = easy + med + hard;
+
+    // sample-problem leaf: if title starts with "📝 Sample Problem"
+    const isProblem = /Sample Problem/i.test(title);
+    const slug = node.dataset.practiceSlug
+      || (isProblem ? (node.querySelector("a.practice-pill")?.dataset.slug) : null);
+
+    // status — for leaf problems, pull from localStorage
+    let statusHtml = "";
+    if (slug) {
+      const s = getStatus(slug);
+      const cls = s === "passed" ? "pass" : (s === "attempted" ? "att" : "todo");
+      const glyph = s === "passed" ? "●" : (s === "attempted" ? "◐" : "○");
+      statusHtml = `<span class="status ${cls}" title="${s}">${glyph}</span>`;
+      node.dataset.practiceSlug = slug;
+    }
+
+    // per-node aggregate: "X/Y ▶"
+    let solvedHtml = "";
+    if (uniq.length > 0 && !slug) {
+      const solved = uniq.filter(s => getStatus(s) === "passed").length;
+      solvedHtml = `<span class="chip muted">${solved}/${uniq.length} ▶</span>`;
+    }
+
+    // difficulty chip logic:
+    //  • leaf problem: single chip of its own difficulty
+    //  • section/phase WITH a practice table: show histogram "12M · 5H"
+    //  • prose-only node: no chip (narrative mentions "Hard" shouldn't leak)
+    let diffHtml = "";
+    let dominantDiff = "";
+    if (slug && total) {
+      dominantDiff = hard ? "Hard" : med ? "Medium" : "Easy";
+      diffHtml = `<span class="chip diff-${dominantDiff}">${dominantDiff}</span>`;
+    } else if (total >= 2) {
+      const parts = [];
+      if (easy) parts.push(`<span class="chip diff-Easy">${easy}E</span>`);
+      if (med) parts.push(`<span class="chip diff-Medium">${med}M</span>`);
+      if (hard) parts.push(`<span class="chip diff-Hard">${hard}H</span>`);
+      diffHtml = parts.join("");
+      dominantDiff = hard >= med && hard >= easy ? "Hard" : med >= easy ? "Medium" : "Easy";
+    } else if (total === 1) {
+      dominantDiff = hard ? "Hard" : med ? "Medium" : "Easy";
+      diffHtml = `<span class="chip diff-${dominantDiff}">${dominantDiff}</span>`;
+    }
+
+    // pattern chips: leaf → 1, section → up to 2, phase → up to 2
+    const maxPats = level === 1 ? 2 : level === 2 ? 2 : 1;
+    const patChipsHtml = patterns.slice(0, maxPats)
+      .map(p => `<span class="chip teal">${p}</span>`).join("");
+
+    // preamble phases (doc intro) get no chips at all
+    if (isPreamble) {
+      meta.innerHTML = "";
+    } else {
+      meta.innerHTML = statusHtml + diffHtml + patChipsHtml + solvedHtml;
+    }
+
+    // dataset tags for filter
+    node.dataset.difficulty = dominantDiff || "";
+    const diffSet = [];
+    if (easy) diffSet.push("Easy");
+    if (med)  diffSet.push("Medium");
+    if (hard) diffSet.push("Hard");
+    if (slug && !diffSet.length && dominantDiff) diffSet.push(dominantDiff);
+    node.dataset.difficulties = diffSet.join("|"); // ← used by facet filter
+    node.dataset.patterns = patterns.join("|");
+    node.dataset.status = slug ? getStatus(slug) : "";
+    node.dataset.practiceCount = uniq.length;
+
+    NODE_INDEX.push({
+      id: node.id,
+      title,
+      level: parseInt(node.dataset.level || "0"),
+      patterns,
+      difficulty: dominantDiff,
+      slug,
+      practiceCount: uniq.length,
+    });
+
+    // also stamp section-sub blurb: problem count + est reading time
+    const secSub = node.querySelector(":scope > summary .sec-sub, :scope > summary .phase-sub");
+    if (secSub && node.dataset.level !== "1") {
+      const wc = (bodyText.match(/\b\w+\b/g) || []).length;
+      const mins = Math.max(1, Math.round(wc / 220));
+      const bits = [];
+      if (uniq.length) bits.push(`${uniq.length} problem${uniq.length > 1 ? "s" : ""}`);
+      bits.push(`${mins}m read`);
+      secSub.textContent = bits.join(" · ");
+    }
+  }
+}
+
+/* =====================================================================
+   SIDEBAR TREE (mirror of document tree)
+   ===================================================================== */
+function buildSidebar() {
+  const side = $("#sidetree");
+  side.innerHTML = "";
+  const phases = $$("#guide > .phase-node");
+  for (const ph of phases) {
+    const d = document.createElement("details");
+    const s = document.createElement("summary");
+    s.innerHTML = `<span class="caret">▸</span>${ph.dataset.title}`;
+    d.appendChild(s);
+
+    const sections = $$(":scope > .phase-body > .section-node", ph);
+    for (const sec of sections) {
+      const d2 = document.createElement("details");
+      const s2 = document.createElement("summary");
+      s2.innerHTML = `<span class="caret">▸</span>${sec.dataset.title}`;
+      d2.appendChild(s2);
+
+      const subs = $$(":scope > .section-body > .subnode", sec);
+      for (const sub of subs) {
+        const a = document.createElement("a");
+        a.href = `#${sub.id}`;
+        a.textContent = sub.dataset.title;
+        a.dataset.target = sub.id;
+        d2.appendChild(a);
+      }
+      d.appendChild(d2);
+    }
+
+    // also add a direct anchor to the phase itself
+    const phAnchor = document.createElement("a");
+    phAnchor.href = `#${ph.id}`;
+    phAnchor.dataset.target = ph.id;
+    phAnchor.textContent = "↑ Overview";
+    phAnchor.style.fontStyle = "italic";
+    phAnchor.style.opacity = "0.6";
+    // insert as first child after sum — skipped to keep things simple
+    side.appendChild(d);
+  }
+
+  side.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-target]");
+    if (!a) return;
+    e.preventDefault();
+    openTo(a.dataset.target);
+  });
+}
+
+function openTo(idOrSlug) {
+  // Try as section id first, then fall back to resolving as a practice slug
+  let el = document.getElementById(idOrSlug);
+  let highlightPill = null;
+  if (!el) {
+    highlightPill = document.querySelector(`a.practice-pill[data-slug="${idOrSlug}"]`);
+    if (highlightPill) el = highlightPill.closest("tr") || highlightPill.closest(".subnode, .section-node, .phase-node");
+  }
+  if (!el) return;
+  // open all ancestor <details>
+  let cur = el;
+  while (cur) {
+    if (cur.tagName === "DETAILS") cur.open = true;
+    cur = cur.parentElement;
+  }
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (highlightPill) {
+    highlightPill.classList.add("pill-flash");
+    setTimeout(() => highlightPill.classList.remove("pill-flash"), 1800);
+  }
+  if (history.replaceState && el.id) history.replaceState(null, "", "#" + el.id);
+}
+
+/* =====================================================================
+   FACET FILTER (dim, don't hide)
+   ===================================================================== */
+let activeFacet = "all";
+function applyFacet(facet) {
+  activeFacet = facet;
+  $$(".facet").forEach(b => b.classList.toggle("active", b.dataset.facet === facet));
+  const nodes = $$("#guide details");
+  for (const n of nodes) {
+    let keep = true;
+    if (facet !== "all") {
+      const [kind, val] = facet.split(":");
+      if (kind === "diff") {
+        // keep node if ANY problem beneath it carries that difficulty
+        const diffs = (n.dataset.difficulties || "").split("|").filter(Boolean);
+        keep = diffs.length ? diffs.includes(val) : false;
+      }
+      else if (kind === "status") {
+        const s = n.dataset.status;
+        if (val === "todo") keep = !s || s === "todo";
+        else if (val === "att") keep = s === "attempted";
+        else if (val === "pass") keep = s === "passed";
+      }
+    }
+    n.classList.toggle("tree-dim", !keep);
+  }
+}
+
+/* =====================================================================
+   SEARCH (live, dim non-matching)
+   ===================================================================== */
+let searchTimer;
+function applySearch(q) {
+  q = (q || "").trim().toLowerCase();
+  const nodes = $$("#guide details");
+  for (const n of nodes) {
+    const text = (n.dataset.title + " " + (n.dataset.patterns || "")).toLowerCase();
+    const hit = !q || text.includes(q);
+    n.classList.toggle("tree-dim", !hit);
+    if (hit && q) n.open = true;
+  }
+}
+
+/* =====================================================================
+   ⌘K  PALETTE
+   ===================================================================== */
+function openPalette() {
+  $("#palette").classList.add("open");
+  $("#paletteInput").value = "";
+  renderPalette("");
+  setTimeout(() => $("#paletteInput").focus(), 10);
+}
+function closePalette() { $("#palette").classList.remove("open"); }
+
+function renderPalette(q) {
+  q = q.toLowerCase().trim();
+  const list = $("#paletteList");
+  const hits = NODE_INDEX
+    .filter(n => !q || n.title.toLowerCase().includes(q) || (n.patterns || []).some(p => p.toLowerCase().includes(q)))
+    .slice(0, 30);
+  list.innerHTML = hits.map((h, i) => {
+    const kind = h.level === 1 ? "Phase" : h.level === 2 ? "Section" : "Topic";
+    return `<div class="palette-item ${i === 0 ? "active" : ""}" data-id="${h.id}">
+      <span class="kind">${kind}</span>
+      <span>${h.title}</span>
+    </div>`;
+  }).join("") || `<div class="palette-item"><span style="color:var(--muted)">no matches</span></div>`;
+  list.querySelectorAll(".palette-item").forEach(el => {
+    el.addEventListener("mouseenter", () => {
+      list.querySelectorAll(".palette-item").forEach(x => x.classList.remove("active"));
+      el.classList.add("active");
+    });
+    el.addEventListener("click", () => {
+      const id = el.dataset.id;
+      if (id) { closePalette(); openTo(id); }
+    });
+  });
+}
+
+/* =====================================================================
+   RESUME card — shows last attempted node
+   ===================================================================== */
+function paintResume() {
+  const slot = $("#resumeSlot");
+  if (!slot) return;
+  slot.innerHTML = "";
+  const last = localStorage.getItem("atlas.lastSlug");
+  if (!last) return;
+  // Locate the pill that links to this slug (source of truth for resolution)
+  const pill = document.querySelector(`a.practice-pill[data-slug="${last}"]`);
+  if (!pill) return;
+  const status = getStatus(last);
+  if (status === "passed") return; // nothing to resume — already solved
+  // Build a breadcrumb: Phase › Section › Subnode (or problem name from the row)
+  const ph  = pill.closest(".phase-node");
+  const sec = pill.closest(".section-node");
+  const sub = pill.closest(".subnode");
+  const row = pill.closest("tr");
+  const problemName = row?.querySelectorAll("td")?.[1]?.textContent?.trim() || last;
+  const crumb = [ph?.dataset.title, sec?.dataset.title, sub?.dataset.title, problemName]
+    .filter(Boolean).join(" › ");
+  const statusLabel = status === "attempted" ? "Resume · in progress" : "Resume where you left off";
+  slot.innerHTML = `
+    <div class="resume">
+      <div class="resume-icon">⟲</div>
+      <div class="resume-body">
+        <div class="resume-label">${statusLabel}</div>
+        <div class="resume-target">${crumb}</div>
+      </div>
+      <a href="sql_sandbox.html?slug=${last}" target="_blank" rel="noopener"
+         class="facet active" style="padding:7px 14px">Jump</a>
+    </div>
+  `;
+}
+
+/* =====================================================================
+   PROGRESS RING
+   ===================================================================== */
+function updateProgress() {
+  const all = NODE_INDEX.filter(n => n.slug).map(n => n.slug);
+  const uniq = [...new Set(all)];
+  const solved = uniq.filter(s => getStatus(s) === "passed").length;
+  const total = uniq.length || 58;
+  const pct = Math.round((solved / total) * 100);
+  $("#progPct").textContent = pct;
+  $("#progCount").textContent = solved;
+  $("#progTotal").textContent = total;
+  const ring = $("#ringFg");
+  const circ = 2 * Math.PI * 22;
+  ring.setAttribute("stroke-dashoffset", circ * (1 - solved / total));
+}
+
+/* =====================================================================
+   READING-PROGRESS bar
+   ===================================================================== */
+function onScroll() {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = h > 0 ? window.scrollY / h : 0;
+  $("#readbar").style.width = (pct * 100) + "%";
+}
+window.addEventListener("scroll", onScroll, { passive: true });
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render() {
+  const mdEl = $("#guide-md");
+  if (!mdEl) return;
+  const md = mdEl.textContent.trim();
+  marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
+  const guide = $("#guide");
+  guide.innerHTML = marked.parse(md);
+  decorate(guide);
+  const nodes = buildTree(guide);
+  computeAndPaintMeta(nodes);
+  buildSidebar();
+  updateProgress();
+  paintResume();
+
+  // deep link handling
+  const hash = location.hash.slice(1);
+  const jumpParam = new URLSearchParams(location.search).get("jump");
+  const target = jumpParam || hash;
+  if (target) {
+    requestAnimationFrame(() => openTo(target));
+  }
+}
+
+/* =====================================================================
+   EVENT WIRING
+   ===================================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+  render();
+
+  // search
+  $("#search").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    const v = e.target.value;
+    searchTimer = setTimeout(() => applySearch(v), 120);
+  });
+
+  // facets
+  $("#facetBar").addEventListener("click", (e) => {
+    const b = e.target.closest(".facet");
+    if (!b) return;
+    applyFacet(b.dataset.facet);
+  });
+
+  // expand / collapse
+  $("#expandAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = true));
+  $("#collapseAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = false));
+  $("#resetProg").addEventListener("click", () => {
+    if (!confirm("Clear all progress for every problem?")) return;
+    Object.keys(localStorage).filter(k => k.startsWith("atlas.status.") || k === "atlas.lastSlug").forEach(k => localStorage.removeItem(k));
+    $$("#guide details").forEach(d => {
+      delete d.dataset.status;
+    });
+    const nodes = $$("#guide details");
+    computeAndPaintMeta(nodes.filter(n => n.dataset.title));
+    updateProgress();
+    paintResume();
+  });
+
+  // ⌘K
+  $("#paletteOpen").addEventListener("click", openPalette);
+  $("#paletteInput").addEventListener("input", (e) => renderPalette(e.target.value));
+  $("#paletteInput").addEventListener("keydown", (e) => {
+    const list = $("#paletteList");
+    const items = [...list.querySelectorAll(".palette-item[data-id]")];
+    const idx = items.findIndex(i => i.classList.contains("active"));
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (idx < items.length - 1) { items[idx]?.classList.remove("active"); items[idx + 1]?.classList.add("active"); }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (idx > 0) { items[idx]?.classList.remove("active"); items[idx - 1]?.classList.add("active"); }
+    } else if (e.key === "Enter") {
+      const id = items.find(i => i.classList.contains("active"))?.dataset.id;
+      if (id) { closePalette(); openTo(id); }
+    } else if (e.key === "Escape") closePalette();
+  });
+  $("#palette").addEventListener("click", (e) => {
+    if (e.target.id === "palette") closePalette();
+  });
+  window.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault(); openPalette();
+    } else if (e.key === "/" && document.activeElement === document.body) {
+      e.preventDefault(); $("#search").focus();
+    }
+  });
+
+  // practice click — record last slug for resume
+  $("#guide").addEventListener("click", (e) => {
+    const a = e.target.closest("a.practice-pill");
+    if (a?.dataset.slug) {
+      localStorage.setItem("atlas.lastSlug", a.dataset.slug);
+      // mark attempted if not already
+      if (getStatus(a.dataset.slug) === "todo") setStatus(a.dataset.slug, "attempted");
+    }
+  });
+
+  // storage event — refresh when sandbox writes status in another tab
+  window.addEventListener("storage", (e) => {
+    if (e.key?.startsWith("atlas.status.")) {
+      const nodes = $$("#guide details");
+      computeAndPaintMeta(nodes.filter(n => n.dataset.title));
+      paintPillStatuses(document.getElementById("guide"));
+      updateProgress();
+      paintResume();
+    }
+  });
+  // also refresh on tab-visible (in case sandbox ran in the same tab via popup)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      const nodes = $$("#guide details");
+      computeAndPaintMeta(nodes.filter(n => n.dataset.title));
+      paintPillStatuses(document.getElementById("guide"));
+      updateProgress();
+      paintResume();
+    }
+  });
+});
+</script>
+<!-- ================= EMBEDDED GUIDE MARKDOWN (populated by patch_atlas.py) ================= -->
+<script id="guide-md" type="text/markdown"># PHASE 0 — The Mental Model
 
 > *Before writing any SQL, understand how the engine thinks.*
 
@@ -3436,3 +5028,6 @@ Problems that showcase a single unusual technique worth internalising.
 ---
 
 *Based on patterns from [luuck25/sql](https://github.com/luuck25/sql/blob/main/patterns.md), expanded with intuition, technical details, and worked examples.*
+</script>
+</body>
+</html>
