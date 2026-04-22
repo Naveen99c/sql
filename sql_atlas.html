@@ -145,13 +145,23 @@
     border-left: 2px solid transparent;
     transition: all 160ms ease;
   }
+  /* hide ALL native markers — we use ::marker for a single custom arrow */
   .sidetree summary::-webkit-details-marker { display: none; }
+  .sidetree summary { list-style: none; display: flex; align-items: center; gap: 0; }
+  .sidetree summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 16px;
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 0.6rem;
+    transition: transform 160ms ease, color 160ms ease;
+  }
+  .sidetree details[open] > summary::before { transform: rotate(90deg); color: var(--amber); }
   .sidetree summary:hover { color: var(--parchment); border-left-color: var(--amber); background: rgba(229,166,59,0.04); }
   .sidetree details[open] > summary { color: var(--amber-hot); }
-  .sidetree .caret { width: 10px; color: var(--muted); transition: transform 160ms ease; }
-  .sidetree details[open] > summary .caret { transform: rotate(90deg); color: var(--amber); }
-  .sidetree details details summary { font-size: 0.68rem; padding-left: 22px; }
-  .sidetree details details details summary { padding-left: 34px; font-size: 0.66rem; opacity: 0.9; }
+  .sidetree details details summary { font-size: 0.68rem; padding-left: 12px; }
+  .sidetree details details details summary { padding-left: 24px; font-size: 0.66rem; opacity: 0.9; }
   .sidetree a {
     display: block;
     padding: 3px 10px 3px 34px;
@@ -159,9 +169,21 @@
     font-size: 0.66rem;
     color: var(--muted);
     opacity: 0.85;
+    text-decoration: none;
   }
   .sidetree a:hover { color: var(--amber); background: rgba(229,166,59,0.04); }
   .sidetree a.active { color: var(--amber); background: rgba(229,166,59,0.08); }
+  .sidetree summary .side-nav-link {
+    display: inline;
+    padding: 0;
+    color: inherit;
+    background: none;
+    opacity: 1;
+    text-decoration: none;
+    flex: 1;
+    cursor: pointer;
+  }
+  .sidetree summary:hover .side-nav-link { color: var(--amber); }
 
   /* ============================================
      FACET FILTER bar
@@ -692,12 +714,11 @@
     <span class="marquee-inner">CTE · WINDOW · LAG · LEAD · GROUP&nbsp;BY · HAVING · ROW_NUMBER · RANK · DENSE_RANK · SELF&nbsp;JOIN · ANTI&nbsp;JOIN · PIVOT · SESSIONIZATION · GAPS&nbsp;&amp;&nbsp;ISLANDS · CTE · WINDOW · LAG · LEAD · GROUP&nbsp;BY · HAVING · ROW_NUMBER · RANK · DENSE_RANK · SELF&nbsp;JOIN · ANTI&nbsp;JOIN · PIVOT · SESSIONIZATION · GAPS&nbsp;&amp;&nbsp;ISLANDS&nbsp;·&nbsp;</span>
   </div>
   <div class="max-w-6xl mx-auto px-6 relative">
-    <div class="small-caps text-amber-400 mb-6 reveal" style="animation-delay:.05s">Volume I · Twenty-Twenty-Six Edition</div>
     <h1 class="headline text-6xl md:text-8xl leading-[0.9] mb-8 reveal" style="animation-delay:.15s">
       The <em style="color:var(--amber);font-style:italic;">SQL</em> Atlas
     </h1>
     <p class="serif italic text-xl md:text-2xl max-w-2xl text-[color:var(--parchment-dim)] mb-10 reveal" style="animation-delay:.25s">
-      A cartography of seven phases — from the logical order of execution to recursive CTEs — with fifty-eight hand-graded problems that you solve in the browser.
+      A structured SQL interview prep guide — read the theory, then solve the problem right here in the browser. No account, no setup, progress saved locally.
     </p>
     <div class="flex flex-wrap gap-3 reveal" style="animation-delay:.35s">
       <span class="chip">7 Phases</span>
@@ -1259,18 +1280,22 @@ function buildSidebar() {
   const side = $("#sidetree");
   side.innerHTML = "";
   const phases = $$("#guide > .phase-node");
+
+  function makeSummary(title, targetId) {
+    const s = document.createElement("summary");
+    // ::before pseudo handles the single caret arrow via CSS
+    s.innerHTML = `<a class="side-nav-link" data-target="${targetId}" href="#${targetId}">${title}</a>`;
+    return s;
+  }
+
   for (const ph of phases) {
     const d = document.createElement("details");
-    const s = document.createElement("summary");
-    s.innerHTML = `<span class="caret">▸</span>${ph.dataset.title}`;
-    d.appendChild(s);
+    d.appendChild(makeSummary(ph.dataset.title, ph.id));
 
     const sections = $$(":scope > .phase-body > .section-node", ph);
     for (const sec of sections) {
       const d2 = document.createElement("details");
-      const s2 = document.createElement("summary");
-      s2.innerHTML = `<span class="caret">▸</span>${sec.dataset.title}`;
-      d2.appendChild(s2);
+      d2.appendChild(makeSummary(sec.dataset.title, sec.id));
 
       const subs = $$(":scope > .section-body > .subnode", sec);
       for (const sub of subs) {
@@ -1282,15 +1307,6 @@ function buildSidebar() {
       }
       d.appendChild(d2);
     }
-
-    // also add a direct anchor to the phase itself
-    const phAnchor = document.createElement("a");
-    phAnchor.href = `#${ph.id}`;
-    phAnchor.dataset.target = ph.id;
-    phAnchor.textContent = "↑ Overview";
-    phAnchor.style.fontStyle = "italic";
-    phAnchor.style.opacity = "0.6";
-    // insert as first child after sum — skipped to keep things simple
     side.appendChild(d);
   }
 
