@@ -557,9 +557,12 @@ HAVING COUNT(*) > 1;
 |---|---|---|---|
 | 1 | Duplicate Emails | Easy | [▶ Practice](sql_sandbox.html?slug=duplicate-emails) |
 | 2 | Classes More Than 5 Students | Easy | [▶ Practice](sql_sandbox.html?slug=classes-more-than-5-students) |
-| 3 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
-| 4 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) |
-| 5 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) |
+| 3 | Number of Unique Categories | Easy | [▶ Practice](sql_sandbox.html?slug=number-of-unique-categories) |
+| 4 | Average Selling Price | Easy | [▶ Practice](sql_sandbox.html?slug=average-selling-price) |
+| 5 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
+| 6 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) |
+| 7 | Count Salary Categories | Medium | [▶ Practice](sql_sandbox.html?slug=count-salary-categories) |
+| 8 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) |
 
 ---
 
@@ -1885,8 +1888,9 @@ WHERE num = prev AND num = next;
 | 1 | Consecutive Numbers | Medium | [▶ Practice](sql_sandbox.html?slug=consecutive-numbers) |
 | 2 | Active Businesses | Medium | [▶ Practice](sql_sandbox.html?slug=active-businesses) |
 | 3 | Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) |
-| 4 | **Human Traffic of Stadium** | Hard | [▶ Practice](sql_sandbox.html?slug=human-traffic-of-stadium) |
-| 5 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) |
+| 4 | **Consecutive Transactions** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions) |
+| 5 | **Human Traffic of Stadium** | Hard | [▶ Practice](sql_sandbox.html?slug=human-traffic-of-stadium) |
+| 6 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) |
 
 ---
 
@@ -3436,3 +3440,279 @@ Problems that showcase a single unusual technique worth internalising.
 ---
 
 *Based on patterns from [luuck25/sql](https://github.com/luuck25/sql/blob/main/patterns.md), expanded with intuition, technical details, and worked examples.*
+
+---
+
+# PHASE 7 — FAANG Frontier (Behavioral-Data, Performance & DML)
+
+This phase closes the gaps flagged in a FAANG-bar audit of the guide. Each pattern maps
+to a signature interview question at Meta / Amazon / Google / Apple / Netflix / LinkedIn.
+
+---
+
+## 7.1 Sessionization — 30-Minute Inactivity Rule
+
+### What It Is
+
+Collapse a stream of per-event rows into **sessions**: maximal runs of events from the
+same user separated by ≤ 30 minutes. Classic "tag each event with a session id" problem.
+
+### The Pattern
+
+```sql
+-- Flag each event as "starts a new session" (gap > 30 min OR first event)
+WITH flagged AS (
+  SELECT user_id, event_time,
+    CASE WHEN LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time) IS NULL
+              OR (strftime('%s', event_time)
+                  - strftime('%s', LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time))) > 1800
+         THEN 1 ELSE 0 END AS is_new
+  FROM Events
+)
+-- Running sum of the flag = session_id
+SELECT user_id, event_time,
+       SUM(is_new) OVER (PARTITION BY user_id ORDER BY event_time) AS session_id
+FROM flagged;
+```
+
+💡 **Why it works:** running-sum over a 0/1 indicator turns "is new" into monotonically
+increasing session IDs per user. Aggregate that by (user_id, session_id) for start/end/count.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) |
+
+---
+
+## 7.2 Cohort Retention Curves
+
+### What It Is
+
+Group users by signup date, then for each cohort measure what fraction is still active
+on Day 0, Day 1, Day 7, Day 30. The standard "retention pivot" table every growth team builds.
+
+### The Pattern
+
+```sql
+SELECT u.signup_date AS cohort_date,
+       COUNT(DISTINCT u.user_id) AS cohort_size,
+       COUNT(DISTINCT CASE WHEN e.event_date = date(u.signup_date,'+1 day') THEN e.user_id END) AS d1,
+       COUNT(DISTINCT CASE WHEN e.event_date = date(u.signup_date,'+7 day') THEN e.user_id END) AS d7
+FROM Users u
+LEFT JOIN Events e ON e.user_id = u.user_id
+GROUP BY u.signup_date;
+```
+
+⚠️ Use `LEFT JOIN` — users with no events must still contribute to `cohort_size`.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Cohort Retention Day N | Hard | [▶ Practice](sql_sandbox.html?slug=cohort-retention-day-n) |
+
+---
+
+## 7.3 Funnel Conversion
+
+### What It Is
+
+Given an ordered sequence of steps (view → add_to_cart → checkout → purchase), measure
+the drop-off at each step. Meta + Amazon analytics staple.
+
+### The Pattern
+
+```sql
+SELECT step, COUNT(DISTINCT user_id) AS users_reached
+FROM FunnelEvents
+GROUP BY step
+ORDER BY CASE step WHEN 'view' THEN 1
+                   WHEN 'add_to_cart' THEN 2
+                   WHEN 'checkout' THEN 3
+                   WHEN 'purchase' THEN 4 END;
+```
+
+For a **strict** funnel (user must have done all earlier steps), use `MAX(step_order) OVER (PARTITION BY user_id)`
+or a chain of `EXISTS` clauses.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Funnel Conversion Rates | Medium | [▶ Practice](sql_sandbox.html?slug=funnel-conversion-rates) |
+
+---
+
+## 7.4 A/B Test Lift
+
+### What It Is
+
+Given assignment + conversion tables, compute conversion rate per variant and lift vs
+control. Every experimentation team computes this daily.
+
+### The Pattern
+
+```sql
+SELECT a.variant,
+       COUNT(*) AS users,
+       COUNT(c.user_id) AS converters,
+       ROUND(1.0 * COUNT(c.user_id) / COUNT(*), 4) AS conversion_rate
+FROM Assignments a
+LEFT JOIN Conversions c ON c.user_id = a.user_id
+GROUP BY a.variant;
+```
+
+🔧 **Lift vs control:** wrap the above in a CTE and subtract control's rate from treatment's
+rate, or divide and subtract 1.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | A/B Test Lift | Medium | [▶ Practice](sql_sandbox.html?slug=ab-test-lift) |
+
+---
+
+## 7.5 Rolling N-Day Windows
+
+### What It Is
+
+For every date, count distinct users active in the last N days. Classic MAU/DAU
+rolling window — distinct count cannot use plain window frames; needs a correlated
+subquery or a self-join on the date spine.
+
+### The Pattern
+
+```sql
+WITH dates AS (SELECT DISTINCT login_date FROM Logins)
+SELECT d.login_date AS activity_date,
+       (SELECT COUNT(DISTINCT l.user_id) FROM Logins l
+        WHERE l.login_date BETWEEN date(d.login_date,'-6 day') AND d.login_date) AS rolling_7d_users
+FROM dates d;
+```
+
+⚠️ `COUNT(DISTINCT …) OVER (…)` is **not** supported in most engines (incl. SQLite).
+The correlated subquery is the portable workaround.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Rolling 7-Day Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=rolling-7-day-active-users) |
+
+---
+
+## 7.6 Recursive Org Chart — Transitive Reports
+
+### What It Is
+
+Given an employee table with a self-referencing `manager_id`, count every employee's
+**transitive** reports (direct + indirect). A recursive CTE walks the hierarchy.
+
+### The Pattern
+
+```sql
+WITH RECURSIVE reports(mgr, emp) AS (
+  SELECT manager_id, id FROM Employees WHERE manager_id IS NOT NULL
+  UNION ALL
+  SELECT r.mgr, e.id FROM reports r JOIN Employees e ON e.manager_id = r.emp
+)
+SELECT mgr, COUNT(*) AS total_reports
+FROM reports
+GROUP BY mgr;
+```
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Managers with At Least 5 Reports | Medium | [▶ Practice](sql_sandbox.html?slug=managers-with-at-least-5-reports) |
+
+---
+
+## 7.7 String Hygiene — Case, Validation
+
+### What It Is
+
+Warm-up round staples: normalize casing, validate emails, extract domains.
+Every FAANG onsite opens with one of these.
+
+### The Patterns
+
+```sql
+-- Proper-case a name
+SELECT UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) AS name FROM Users;
+
+-- Validate an email (SQLite — no REGEXP; use LIKE + GLOB)
+WHERE mail LIKE '%@leetcode.com'
+  AND (SUBSTR(mail,1,1) BETWEEN 'a' AND 'z' OR SUBSTR(mail,1,1) BETWEEN 'A' AND 'Z')
+  AND SUBSTR(mail, 1, length(mail)-length('@leetcode.com')) NOT GLOB '*[^A-Za-z0-9_.-]*';
+```
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Fix Names in a Table | Easy | [▶ Practice](sql_sandbox.html?slug=fix-names-in-a-table) |
+| 2 | Find Users With Valid E-Mails | Easy | [▶ Practice](sql_sandbox.html?slug=find-users-with-valid-emails) |
+
+---
+
+## 7.8 DML — Deduplication via DELETE
+
+### What It Is
+
+Delete duplicate rows but keep one canonical row per group (usually the smallest id).
+Asked in interviews as `DELETE … WHERE id NOT IN (SELECT MIN(id) GROUP BY email)`.
+
+### The Pattern
+
+```sql
+-- Production:
+DELETE FROM PersonDedup
+WHERE id NOT IN (SELECT MIN(id) FROM PersonDedup GROUP BY email);
+
+-- Atlas runner (SELECT-only view of the post-state):
+SELECT id, email FROM PersonDedup p
+WHERE id = (SELECT MIN(id) FROM PersonDedup WHERE email = p.email);
+```
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Delete Duplicate Emails (State After Dedup) | Easy | [▶ Practice](sql_sandbox.html?slug=delete-duplicate-emails) |
+
+---
+
+## 7.9 Sweep-Line for Intervals — Max Concurrency
+
+### What It Is
+
+Given a table of intervals, find the peak number of overlapping intervals at any instant.
+Generalized "meeting rooms" in SQL.
+
+### The Pattern
+
+```sql
+WITH events AS (
+  SELECT start_time AS t,  1 AS delta FROM Meetings
+  UNION ALL
+  SELECT end_time   AS t, -1 AS delta FROM Meetings
+)
+SELECT MAX(SUM(delta) OVER (ORDER BY t, delta ASC ROWS UNBOUNDED PRECEDING))
+FROM events;
+```
+
+⚠️ Half-open intervals `[start, end)` are the usual convention: a meeting **ending** at the
+same instant another **starts** does not overlap. Sort end events (`delta = -1`) before
+start events (`delta = +1`) at ties → tie-break `delta ASC`.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Max Concurrent Meetings | Hard | [▶ Practice](sql_sandbox.html?slug=max-concurrent-meetings) |
+
