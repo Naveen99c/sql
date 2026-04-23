@@ -193,6 +193,18 @@ overlay_styles = """
   width: 100% !important;
 }
 body.sandbox-open { overflow: hidden; }
+
+/* Mobile — compact overlay chrome, stacked workspace */
+@media (max-width: 768px) {
+  .sandbox-overlay-bar { padding: 0 12px; gap: 10px; flex: 0 0 40px; }
+  .sandbox-close-btn { padding: 5px 10px; font-size: 0.62rem; letter-spacing: 0.1em; }
+  .sandbox-crumb { font-size: 0.62rem; letter-spacing: 0.02em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  #sandboxMount .workspace { padding: 0.4rem !important; gap: 0.4rem !important; flex-direction: column !important; height: auto !important; }
+  #sandboxMount .left-pane, #sandboxMount .right-pane { flex: 0 0 auto !important; width: 100% !important; max-width: none !important; min-width: 0 !important; }
+  #sandboxMount .left-pane { min-height: 42vh; max-height: 55vh; }
+  #sandboxMount .editor-env  { min-height: 40vh; }
+  #sandboxMount .console-env { min-height: 45vh; }
+}
 </style>
 """
 
@@ -267,12 +279,24 @@ bridge_js = """
     overlay.hidden = false;
     document.body.classList.add('sandbox-open');
 
+    // Pass difficulty through to the sandbox so its practice timer can pick
+    // the right pacing target (Easy 10m / Medium 20m / Hard 30m).
+    window.__sandboxDifficulty = null;
     if (pill) {
       const ph  = pill.closest('.phase-node')?.dataset.title || '';
       const sec = pill.closest('.section-node')?.dataset.title || '';
       const row = pill.closest('tr');
       const name = row?.querySelectorAll('td')?.[1]?.textContent?.trim() || slug;
       crumb.textContent = [ph, sec, name].filter(Boolean).join(' \u203a ');
+      // The row's cells are | # | Problem | Difficulty | Practice | — index 2.
+      const cells = row?.querySelectorAll('td') || [];
+      for (let i = 0; i < cells.length; i++) {
+        const t = (cells[i].textContent || '').trim();
+        if (t === 'Easy' || t === 'Medium' || t === 'Hard') {
+          window.__sandboxDifficulty = t;
+          break;
+        }
+      }
     } else {
       crumb.textContent = slug;
     }

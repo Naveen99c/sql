@@ -701,6 +701,127 @@
     padding: 3rem 0 4rem;
     color: var(--muted);
   }
+
+  /* =========================================================
+     RESPONSIVE — tablet ≤1024px
+     ========================================================= */
+  @media (max-width: 1024px) {
+    .guide-body { font-size: 0.95rem; }
+    .guide-body pre { font-size: 0.8rem; padding: 0.9rem; }
+    .guide-body table { font-size: 0.82rem; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .guide-body th, .guide-body td { padding: 7px 10px; white-space: nowrap; }
+    .facets { gap: 5px; }
+    .facet { padding: 5px 10px; font-size: 0.72rem; }
+    .search { font-size: 0.85rem; padding: 9px 12px; }
+  }
+
+  /* =========================================================
+     RESPONSIVE — phone ≤768px
+     Hide the persistent sidebar, stack hero + chips, shrink
+     typography, make tables horizontally scrollable, collapse
+     pacing-target rows to a stacked layout.
+     ========================================================= */
+  @media (max-width: 768px) {
+    /* Prevent any intrinsic min-content child (pre, table, long word) from
+       expanding the layout past the viewport — all nested scrolls stay local. */
+    html, body { overflow-x: hidden !important; max-width: 100vw; }
+    body { font-size: 15px; }
+    header { padding-top: 4rem !important; padding-bottom: 1.5rem !important; }
+    header > div { max-width: 100% !important; }
+    .headline { font-size: clamp(2.2rem, 11vw, 3.5rem) !important; line-height: 1 !important; word-break: break-word; }
+    header p { font-size: 1rem !important; }
+    header .chip { font-size: 0.62rem; padding: 4px 9px; }
+
+    /* Collapse the 240px side column — sidebar is already md:hidden.
+       min-width:0 is critical: grid/flex items default to min-content sizing,
+       and a single long table/pre/word inside would push the grid wider than
+       the viewport. Clamping to 100vw plus min-width:0 forces children to
+       shrink into local overflow-auto scrolls instead. */
+    main {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+      gap: 1rem !important;
+      max-width: 100vw !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      min-width: 0;
+    }
+    main > * { min-width: 0 !important; max-width: 100% !important; }
+    main pre, main code { white-space: pre-wrap !important; word-break: break-word !important; }
+
+    /* Search + facets stack */
+    .search-row { flex-direction: column !important; align-items: stretch !important; }
+    .facets { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .facets .facet { white-space: nowrap; }
+
+    /* Pacing target card — stack each row vertically */
+    .pacing-row {
+      grid-template-columns: 1fr !important;
+      gap: 6px !important;
+      text-align: left;
+    }
+
+    .guide-body { font-size: 0.92rem; line-height: 1.65; }
+    .guide-body h1 { font-size: 1.6rem; }
+    .guide-body h2 { font-size: 1.3rem; }
+    .guide-body h3 { font-size: 1.1rem; }
+    .guide-body pre { font-size: 0.76rem; padding: 0.75rem; }
+    .guide-body table { font-size: 0.8rem; }
+    .guide-body th, .guide-body td { padding: 6px 8px; }
+    .guide-body blockquote { font-size: 0.92rem; padding: 0.5rem 0.9rem; }
+
+    .phase-head, .section-head, .subnode-head { padding: 10px 12px; gap: 8px; }
+    .guide-body a.practice-pill { font-size: 0.62rem; padding: 4px 8px; letter-spacing: 0.1em; }
+
+    /* Tree summaries — stack meta/chips below title to stop
+       1-word-per-line wrapping of long phase titles on narrow screens. */
+    .phase-node > summary,
+    .section-node > summary,
+    .subnode > summary {
+      grid-template-columns: 1.2rem 1fr !important;
+      gap: 8px !important;
+    }
+    .phase-node > summary > .meta,
+    .section-node > summary > .meta,
+    .subnode > summary > .meta {
+      grid-column: 2;
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .phase-node > summary .phase-num { font-size: 1.9rem !important; min-width: 2rem !important; }
+    .phase-node > summary .phase-title { font-size: 1.25rem !important; }
+    .phase-node > summary .phase-sub { font-size: 0.78rem; }
+
+    /* Palette — full-screen on tiny viewports */
+    .palette {
+      width: calc(100vw - 28px);
+      max-width: 100%;
+      max-height: 70vh;
+      top: 14px;
+    }
+
+    /* Resume card — stack */
+    .resume { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 14px; }
+
+    /* Hide decorative marquee on tiny screens (visual noise) */
+    .marquee { display: none; }
+
+    footer { margin-top: 3rem; padding: 2rem 0 3rem; }
+  }
+
+  /* =========================================================
+     RESPONSIVE — tiny phone ≤420px
+     ========================================================= */
+  @media (max-width: 420px) {
+    header { padding-top: 3rem !important; padding-bottom: 1rem !important; }
+    .guide-body { font-size: 0.88rem; }
+    .guide-body pre { font-size: 0.72rem; padding: 0.6rem; }
+    .guide-body table { font-size: 0.74rem; }
+    .guide-body th, .guide-body td { padding: 5px 7px; }
+    .guide-body a.practice-pill { font-size: 0.58rem; padding: 3px 7px; }
+    .phase-head, .section-head { font-size: 0.88rem; }
+  }
 </style>
 </head>
 
@@ -789,17 +910,17 @@
       <div class="small-caps text-[color:var(--rust)] mb-3">Interview Dossier</div>
       <h2 class="headline text-3xl md:text-4xl mb-6">Pacing Targets</h2>
       <div style="border:1px solid rgba(210,106,77,0.25); border-radius: 4px; background: linear-gradient(180deg, rgba(210,106,77,0.07), transparent);">
-        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
+        <div class="pacing-row grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
           <span class="chip diff-Easy">Easy</span>
           <span class="serif text-lg">Read · Plan · Write · Verify</span>
           <span class="mono text-[color:var(--teal)] text-sm">≤ 10 min</span>
         </div>
-        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
+        <div class="pacing-row grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center" style="border-bottom:1px solid rgba(210,106,77,0.12);">
           <span class="chip diff-Medium">Medium</span>
           <span class="serif text-lg">Identify pattern · Decompose · CTE or Window · Verify</span>
           <span class="mono text-[color:var(--amber)] text-sm">≤ 20 min</span>
         </div>
-        <div class="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center">
+        <div class="pacing-row grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 items-center">
           <span class="chip diff-Hard">Hard</span>
           <span class="serif text-lg">Sketch approach · Handle edges · Multi-CTE or recursion</span>
           <span class="mono text-[color:var(--rust)] text-sm">≤ 30 min</span>
@@ -3160,6 +3281,23 @@ LIMIT 1;
 
 **Intuition:** Running sum of weight ordered by turn. The last person whose cumulative weight ≤ 1000 is the answer.
 
+### Sub-Pattern D — Rolling N-Day Distinct Counts
+
+🧠 *"For every date, count distinct users active in the last N days."* Classic MAU/DAU
+rolling window. **`COUNT(DISTINCT …) OVER (…)` is not portable** (unsupported in SQLite and
+most engines) — the portable workaround is a correlated subquery on a date spine:
+
+```sql
+WITH dates AS (SELECT DISTINCT login_date FROM Logins)
+SELECT d.login_date AS activity_date,
+       (SELECT COUNT(DISTINCT l.user_id) FROM Logins l
+        WHERE l.login_date BETWEEN date(d.login_date,'-6 day') AND d.login_date) AS rolling_7d_users
+FROM dates d;
+```
+
+💡 Plain `COUNT(*) OVER (ORDER BY d RANGE BETWEEN '6 day' PRECEDING AND CURRENT ROW)` works
+for totals, but **distinct** counts need the correlated subquery (or a self-join on the spine).
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -3167,7 +3305,8 @@ LIMIT 1;
 | 1 | Game Play Analysis III | Medium | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-iii) |
 | 2 | Last Person to Fit in the Bus | Medium | [▶ Practice](sql_sandbox.html?slug=last-person-to-fit-in-the-bus) |
 | 3 | Account Balance | Medium | [▶ Practice](sql_sandbox.html?slug=account-balance) |
-| 4 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
+| 4 | Rolling 7-Day Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=rolling-7-day-active-users) |
+| 5 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
 
 ---
 
@@ -3619,11 +3758,35 @@ FROM grouped
 GROUP BY hall_id, grp;
 ```
 
+### Sweep-Line — Max Concurrency
+
+🧠 *"Given a table of intervals, find the peak number of overlapping intervals at any instant."*
+Generalized "meeting rooms" in SQL. Split each interval into two timeline events (`+1` at start,
+`-1` at end), sort, and take the running max.
+
+```sql
+WITH events AS (
+  SELECT start_time AS t,  1 AS delta FROM Meetings
+  UNION ALL
+  SELECT end_time   AS t, -1 AS delta FROM Meetings
+)
+SELECT MAX(running) AS max_concurrent
+FROM (
+  SELECT SUM(delta) OVER (ORDER BY t, delta ASC ROWS UNBOUNDED PRECEDING) AS running
+  FROM events
+);
+```
+
+⚠️ **Half-open intervals** `[start, end)` are the usual convention: a meeting ending at the
+same instant another starts does not overlap. Sort end events (`delta = -1`) **before** start
+events (`delta = +1`) at ties → tie-break `delta ASC`.
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 2 | **Streamer Banned Accounts** | Medium | [▶ Practice](sql_sandbox.html?slug=leetflex-banned-accounts) |
+| 1 | **Streamer Banned Accounts** | Medium | [▶ Practice](sql_sandbox.html?slug=leetflex-banned-accounts) |
+| 2 | Max Concurrent Meetings | Hard | [▶ Practice](sql_sandbox.html?slug=max-concurrent-meetings) |
 
 ---
 
@@ -3760,15 +3923,37 @@ ORDER BY d.dt;
 
 **Why recursion?** No calendar table exists; we manufacture the continuous date spine ourselves.
 
+### Sub-Pattern C — Transitive Closure (Org Chart)
+
+🧠 *"Given an employee table with a self-referencing `manager_id`, count every manager's
+transitive reports (direct + indirect)."* A recursive CTE walks the hierarchy downward, then
+an outer aggregation counts each walked edge.
+
+```sql
+WITH RECURSIVE reports(mgr, emp) AS (
+  SELECT manager_id, id FROM Employees WHERE manager_id IS NOT NULL
+  UNION ALL
+  SELECT r.mgr, e.id FROM reports r JOIN Employees e ON e.manager_id = r.emp
+)
+SELECT mgr, COUNT(*) AS total_reports
+FROM reports
+GROUP BY mgr;
+```
+
+💡 Same template works for any parent-child graph: folder tree size, bill-of-materials
+explosion, reply-thread depth — the recursion builds the transitive closure, the outer
+`GROUP BY` summarizes it.
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
 | 1 | Process Tasks Using Servers | Medium | [▶ Practice](sql_sandbox.html?slug=process-tasks-using-servers) |
 | 2 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
-| 3 | **Find the Quiet Students in All Exams** | Hard | [▶ Practice](sql_sandbox.html?slug=find-the-quiet-students-in-all-exams) |
-| 4 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) |
-| 5 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) |
+| 3 | Managers with At Least 5 Reports | Medium | [▶ Practice](sql_sandbox.html?slug=managers-with-at-least-5-reports) |
+| 4 | **Find the Quiet Students in All Exams** | Hard | [▶ Practice](sql_sandbox.html?slug=find-the-quiet-students-in-all-exams) |
+| 5 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) |
+| 6 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) |
 
 ---
 
@@ -4029,7 +4214,106 @@ FROM employees;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
+| 1 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) |
 | 2 | **Product Price at a Given Date** (SCD-2) | Medium | [▶ Practice](sql_sandbox.html?slug=product-price-at-a-given-date) |
+
+---
+
+## 4.6 Funnel Conversion
+
+### What It Is
+
+Given an ordered sequence of product steps (e.g. `view → add_to_cart → checkout → purchase`),
+compute how many distinct users reach each step and the drop-off between adjacent steps.
+Every growth / e-commerce analytics team ships one of these dashboards.
+
+### The Pattern — Loose Funnel (per-step counts)
+
+```sql
+SELECT step,
+       COUNT(DISTINCT user_id) AS users_reached
+FROM FunnelEvents
+GROUP BY step
+ORDER BY CASE step WHEN 'view'        THEN 1
+                   WHEN 'add_to_cart' THEN 2
+                   WHEN 'checkout'    THEN 3
+                   WHEN 'purchase'    THEN 4 END;
+```
+
+### The Pattern — Strict Funnel (must have done all prior steps)
+
+🧠 A strict funnel only counts a user at step *k* if they previously completed steps *1…k−1*.
+Compute each user's deepest reached step with a window, then aggregate:
+
+```sql
+WITH reached AS (
+  SELECT user_id,
+         MAX(CASE step WHEN 'view'        THEN 1
+                       WHEN 'add_to_cart' THEN 2
+                       WHEN 'checkout'    THEN 3
+                       WHEN 'purchase'    THEN 4 END) AS max_step
+  FROM FunnelEvents GROUP BY user_id
+)
+SELECT s.step,
+       SUM(CASE WHEN r.max_step >= s.ord THEN 1 ELSE 0 END) AS users_reached
+FROM (VALUES ('view',1),('add_to_cart',2),('checkout',3),('purchase',4)) AS s(step,ord)
+CROSS JOIN reached r
+GROUP BY s.step, s.ord
+ORDER BY s.ord;
+```
+
+💡 **Drop-off ratios:** wrap either pattern in a CTE and divide each step's count by the
+previous step's count: `LAG(users_reached) OVER (ORDER BY ord)`.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Funnel Conversion Rates | Medium | [▶ Practice](sql_sandbox.html?slug=funnel-conversion-rates) |
+
+---
+
+## 4.7 A/B Test Lift
+
+### What It Is
+
+Given an assignment table (`user_id → variant`) and a conversions table (`user_id`), compute
+per-variant conversion rate and the **lift** of treatment over control. Every experimentation
+team runs this query daily.
+
+### The Pattern
+
+```sql
+WITH rates AS (
+  SELECT a.variant,
+         COUNT(*)                 AS users,
+         COUNT(c.user_id)         AS converters,
+         1.0 * COUNT(c.user_id) / COUNT(*) AS conversion_rate
+  FROM Assignments a
+  LEFT JOIN Conversions c ON c.user_id = a.user_id
+  GROUP BY a.variant
+)
+SELECT variant, users, converters,
+       ROUND(conversion_rate, 4) AS conversion_rate,
+       ROUND(conversion_rate
+             - (SELECT conversion_rate FROM rates WHERE variant = 'control'), 4) AS absolute_lift,
+       ROUND(conversion_rate
+             / (SELECT conversion_rate FROM rates WHERE variant = 'control') - 1, 4) AS relative_lift
+FROM rates;
+```
+
+⚠️ **LEFT JOIN** is critical — users assigned to a variant who *didn't* convert must still
+count toward the denominator. An INNER JOIN silently inflates every rate.
+
+💡 **Statistical significance** is out of scope for pure SQL — compute `p̂`, `n`, then hand
+off to a z-test / chi-squared in the BI layer. SQL gets you the rates; stats gets you the
+confidence.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | A/B Test Lift | Medium | [▶ Practice](sql_sandbox.html?slug=ab-test-lift) |
 
 ---
 ---
@@ -4177,8 +4461,9 @@ GROUP BY DATE_FORMAT(trans_date, '%Y-%m'), country;
 | 1 | Rising Temperature | Easy | [▶ Practice](sql_sandbox.html?slug=rising-temperature) |
 | 2 | Monthly Transactions I | Medium | [▶ Practice](sql_sandbox.html?slug=monthly-transactions-i) |
 | 3 | Restaurant Growth | Medium | [▶ Practice](sql_sandbox.html?slug=restaurant-growth) |
-| 4 | **Friday Purchases I** | Hard | [▶ Practice](sql_sandbox.html?slug=friday-purchases-i) |
-| 5 | **New Users Daily Count** | Medium | [▶ Practice](sql_sandbox.html?slug=new-users-daily-count) |
+| 4 | Cohort Retention Day N | Hard | [▶ Practice](sql_sandbox.html?slug=cohort-retention-day-n) |
+| 5 | **Friday Purchases I** | Hard | [▶ Practice](sql_sandbox.html?slug=friday-purchases-i) |
+| 6 | **New Users Daily Count** | Medium | [▶ Practice](sql_sandbox.html?slug=new-users-daily-count) |
 
 ---
 
@@ -4326,6 +4611,31 @@ FROM posts p,
 ```
 
 💡 This is the canonical "tags CSV → rows for a join" interview warm-up. Once you have rows, the rest is ordinary SQL.
+
+### String Hygiene — Case Normalization & Validation
+
+🧠 Warm-up staples: proper-case a name, validate an email, extract a domain. FAANG onsites
+frequently open with one of these.
+
+```sql
+-- Proper-case a name (first letter upper, rest lower)
+SELECT UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) AS name FROM Users;
+
+-- Validate an email (SQLite-portable; no REGEXP — use LIKE + GLOB)
+WHERE mail LIKE '%@leetcode.com'
+  AND (SUBSTR(mail,1,1) BETWEEN 'a' AND 'z' OR SUBSTR(mail,1,1) BETWEEN 'A' AND 'Z')
+  AND SUBSTR(mail, 1, length(mail)-length('@leetcode.com')) NOT GLOB '*[^A-Za-z0-9_.-]*';
+```
+
+⚠️ **Engine quirk:** SQLite has no native REGEXP — the `GLOB` negated character class above is
+the portable escape hatch. MySQL/PostgreSQL can use `REGEXP` / `~` directly.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Fix Names in a Table | Easy | [▶ Practice](sql_sandbox.html?slug=fix-names-in-a-table) |
+| 2 | Find Users With Valid E-Mails | Easy | [▶ Practice](sql_sandbox.html?slug=find-users-with-valid-emails) |
 
 ---
 
@@ -4695,6 +5005,16 @@ VALUES (42, 99.99);
 ```
 
 💡 Saves a round-trip and eliminates race conditions between "INSERT then SELECT" (the row you inserted may be one of many concurrent inserts). Essential for auto-generated PKs.
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Delete Duplicate Emails (State After Dedup) | Easy | [▶ Practice](sql_sandbox.html?slug=delete-duplicate-emails) |
+
+💡 The Atlas runner executes `SELECT`-only — the equivalent post-state query is
+`SELECT id, email FROM Person p WHERE id = (SELECT MIN(id) FROM Person WHERE email = p.email)`.
+In production, run the `DELETE` form shown above.
 
 ---
 
@@ -5066,283 +5386,8 @@ Problems that showcase a single unusual technique worth internalising.
 
 ---
 
----
-
 *Based on patterns from [luuck25/sql](https://github.com/luuck25/sql/blob/main/patterns.md), expanded with intuition, technical details, and worked examples.*
 
----
-
-# PHASE 7 — FAANG Frontier (Behavioral-Data, Performance & DML)
-
-This phase closes the gaps flagged in a FAANG-bar audit of the guide. Each pattern maps
-to a signature interview question at Meta / Amazon / Google / Apple / Netflix / LinkedIn.
-
----
-
-## 7.1 Sessionization — 30-Minute Inactivity Rule
-
-### What It Is
-
-Collapse a stream of per-event rows into **sessions**: maximal runs of events from the
-same user separated by ≤ 30 minutes. Classic "tag each event with a session id" problem.
-
-### The Pattern
-
-```sql
--- Flag each event as "starts a new session" (gap > 30 min OR first event)
-WITH flagged AS (
-  SELECT user_id, event_time,
-    CASE WHEN LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time) IS NULL
-              OR (strftime('%s', event_time)
-                  - strftime('%s', LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time))) > 1800
-         THEN 1 ELSE 0 END AS is_new
-  FROM Events
-)
--- Running sum of the flag = session_id
-SELECT user_id, event_time,
-       SUM(is_new) OVER (PARTITION BY user_id ORDER BY event_time) AS session_id
-FROM flagged;
-```
-
-💡 **Why it works:** running-sum over a 0/1 indicator turns "is new" into monotonically
-increasing session IDs per user. Aggregate that by (user_id, session_id) for start/end/count.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) |
-
----
-
-## 7.2 Cohort Retention Curves
-
-### What It Is
-
-Group users by signup date, then for each cohort measure what fraction is still active
-on Day 0, Day 1, Day 7, Day 30. The standard "retention pivot" table every growth team builds.
-
-### The Pattern
-
-```sql
-SELECT u.signup_date AS cohort_date,
-       COUNT(DISTINCT u.user_id) AS cohort_size,
-       COUNT(DISTINCT CASE WHEN e.event_date = date(u.signup_date,'+1 day') THEN e.user_id END) AS d1,
-       COUNT(DISTINCT CASE WHEN e.event_date = date(u.signup_date,'+7 day') THEN e.user_id END) AS d7
-FROM Users u
-LEFT JOIN Events e ON e.user_id = u.user_id
-GROUP BY u.signup_date;
-```
-
-⚠️ Use `LEFT JOIN` — users with no events must still contribute to `cohort_size`.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Cohort Retention Day N | Hard | [▶ Practice](sql_sandbox.html?slug=cohort-retention-day-n) |
-
----
-
-## 7.3 Funnel Conversion
-
-### What It Is
-
-Given an ordered sequence of steps (view → add_to_cart → checkout → purchase), measure
-the drop-off at each step. Meta + Amazon analytics staple.
-
-### The Pattern
-
-```sql
-SELECT step, COUNT(DISTINCT user_id) AS users_reached
-FROM FunnelEvents
-GROUP BY step
-ORDER BY CASE step WHEN 'view' THEN 1
-                   WHEN 'add_to_cart' THEN 2
-                   WHEN 'checkout' THEN 3
-                   WHEN 'purchase' THEN 4 END;
-```
-
-For a **strict** funnel (user must have done all earlier steps), use `MAX(step_order) OVER (PARTITION BY user_id)`
-or a chain of `EXISTS` clauses.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Funnel Conversion Rates | Medium | [▶ Practice](sql_sandbox.html?slug=funnel-conversion-rates) |
-
----
-
-## 7.4 A/B Test Lift
-
-### What It Is
-
-Given assignment + conversion tables, compute conversion rate per variant and lift vs
-control. Every experimentation team computes this daily.
-
-### The Pattern
-
-```sql
-SELECT a.variant,
-       COUNT(*) AS users,
-       COUNT(c.user_id) AS converters,
-       ROUND(1.0 * COUNT(c.user_id) / COUNT(*), 4) AS conversion_rate
-FROM Assignments a
-LEFT JOIN Conversions c ON c.user_id = a.user_id
-GROUP BY a.variant;
-```
-
-🔧 **Lift vs control:** wrap the above in a CTE and subtract control's rate from treatment's
-rate, or divide and subtract 1.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | A/B Test Lift | Medium | [▶ Practice](sql_sandbox.html?slug=ab-test-lift) |
-
----
-
-## 7.5 Rolling N-Day Windows
-
-### What It Is
-
-For every date, count distinct users active in the last N days. Classic MAU/DAU
-rolling window — distinct count cannot use plain window frames; needs a correlated
-subquery or a self-join on the date spine.
-
-### The Pattern
-
-```sql
-WITH dates AS (SELECT DISTINCT login_date FROM Logins)
-SELECT d.login_date AS activity_date,
-       (SELECT COUNT(DISTINCT l.user_id) FROM Logins l
-        WHERE l.login_date BETWEEN date(d.login_date,'-6 day') AND d.login_date) AS rolling_7d_users
-FROM dates d;
-```
-
-⚠️ `COUNT(DISTINCT …) OVER (…)` is **not** supported in most engines (incl. SQLite).
-The correlated subquery is the portable workaround.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Rolling 7-Day Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=rolling-7-day-active-users) |
-
----
-
-## 7.6 Recursive Org Chart — Transitive Reports
-
-### What It Is
-
-Given an employee table with a self-referencing `manager_id`, count every employee's
-**transitive** reports (direct + indirect). A recursive CTE walks the hierarchy.
-
-### The Pattern
-
-```sql
-WITH RECURSIVE reports(mgr, emp) AS (
-  SELECT manager_id, id FROM Employees WHERE manager_id IS NOT NULL
-  UNION ALL
-  SELECT r.mgr, e.id FROM reports r JOIN Employees e ON e.manager_id = r.emp
-)
-SELECT mgr, COUNT(*) AS total_reports
-FROM reports
-GROUP BY mgr;
-```
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Managers with At Least 5 Reports | Medium | [▶ Practice](sql_sandbox.html?slug=managers-with-at-least-5-reports) |
-
----
-
-## 7.7 String Hygiene — Case, Validation
-
-### What It Is
-
-Warm-up round staples: normalize casing, validate emails, extract domains.
-Every FAANG onsite opens with one of these.
-
-### The Patterns
-
-```sql
--- Proper-case a name
-SELECT UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) AS name FROM Users;
-
--- Validate an email (SQLite — no REGEXP; use LIKE + GLOB)
-WHERE mail LIKE '%@leetcode.com'
-  AND (SUBSTR(mail,1,1) BETWEEN 'a' AND 'z' OR SUBSTR(mail,1,1) BETWEEN 'A' AND 'Z')
-  AND SUBSTR(mail, 1, length(mail)-length('@leetcode.com')) NOT GLOB '*[^A-Za-z0-9_.-]*';
-```
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Fix Names in a Table | Easy | [▶ Practice](sql_sandbox.html?slug=fix-names-in-a-table) |
-| 2 | Find Users With Valid E-Mails | Easy | [▶ Practice](sql_sandbox.html?slug=find-users-with-valid-emails) |
-
----
-
-## 7.8 DML — Deduplication via DELETE
-
-### What It Is
-
-Delete duplicate rows but keep one canonical row per group (usually the smallest id).
-Asked in interviews as `DELETE … WHERE id NOT IN (SELECT MIN(id) GROUP BY email)`.
-
-### The Pattern
-
-```sql
--- Production:
-DELETE FROM PersonDedup
-WHERE id NOT IN (SELECT MIN(id) FROM PersonDedup GROUP BY email);
-
--- Atlas runner (SELECT-only view of the post-state):
-SELECT id, email FROM PersonDedup p
-WHERE id = (SELECT MIN(id) FROM PersonDedup WHERE email = p.email);
-```
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Delete Duplicate Emails (State After Dedup) | Easy | [▶ Practice](sql_sandbox.html?slug=delete-duplicate-emails) |
-
----
-
-## 7.9 Sweep-Line for Intervals — Max Concurrency
-
-### What It Is
-
-Given a table of intervals, find the peak number of overlapping intervals at any instant.
-Generalized "meeting rooms" in SQL.
-
-### The Pattern
-
-```sql
-WITH events AS (
-  SELECT start_time AS t,  1 AS delta FROM Meetings
-  UNION ALL
-  SELECT end_time   AS t, -1 AS delta FROM Meetings
-)
-SELECT MAX(SUM(delta) OVER (ORDER BY t, delta ASC ROWS UNBOUNDED PRECEDING))
-FROM events;
-```
-
-⚠️ Half-open intervals `[start, end)` are the usual convention: a meeting **ending** at the
-same instant another **starts** does not overlap. Sort end events (`delta = -1`) before
-start events (`delta = +1`) at ties → tie-break `delta ASC`.
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Max Concurrent Meetings | Hard | [▶ Practice](sql_sandbox.html?slug=max-concurrent-meetings) |</script>
+</script>
 </body>
 </html>

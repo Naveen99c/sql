@@ -480,6 +480,138 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--ink-line); border-radius: 5px; border: 2px solid var(--ink); }
         ::-webkit-scrollbar-thumb:hover { background: rgba(229,166,59,0.35); }
+
+        /* ===========================
+           Practice Timer
+           =========================== */
+        .timer-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 3px;
+            border: 1px solid var(--ink-line);
+            background: rgba(255,255,255,0.02);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: var(--parchment);
+            user-select: none;
+            transition: border-color 220ms ease, color 220ms ease, background 220ms ease;
+            min-width: 110px;
+            justify-content: center;
+        }
+        .timer-chip .timer-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .timer-chip .timer-value { font-variant-numeric: tabular-nums; }
+        .timer-chip.pace-ok      { border-color: rgba(103,201,192,0.45); color: var(--teal); background: rgba(103,201,192,0.05); }
+        .timer-chip.pace-warn    { border-color: rgba(229,166,59,0.55);  color: var(--amber); background: rgba(229,166,59,0.06); }
+        .timer-chip.pace-over    { border-color: rgba(210,106,77,0.6);   color: var(--rust);  background: rgba(210,106,77,0.08); animation: timerPulse 1.4s ease-in-out infinite; }
+        .timer-chip.paused       { opacity: 0.55; }
+        .timer-controls { display: inline-flex; gap: 4px; }
+        .timer-btn {
+            background: transparent;
+            border: 1px solid var(--ink-line);
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            padding: 5px 9px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: color 180ms ease, border-color 180ms ease;
+        }
+        .timer-btn:hover { color: var(--amber); border-color: var(--amber); }
+        @keyframes timerPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(210,106,77,0.0); }
+            50%      { box-shadow: 0 0 0 3px rgba(210,106,77,0.18); }
+        }
+
+        /* ===========================
+           Responsive — tablet ≤1024px
+           =========================== */
+        @media (max-width: 1024px) {
+            .left-pane  { min-width: 0; max-width: none; }
+            .right-pane { min-width: 0; }
+            .workspace  { gap: 0.5rem; padding: 0.5rem; }
+            header      { padding: 0.6rem 1rem; }
+            .brand      { font-size: 1rem; }
+            .brand .brand-mark { font-size: 0.58rem; padding: 2px 6px; }
+            .content-body { padding: 1.25rem 1.35rem; font-size: 0.9rem; }
+            .content-body h1 { font-size: 1.45rem; }
+        }
+
+        /* ===========================
+           Responsive — phone ≤768px
+           Stack panels vertically.
+           =========================== */
+        @media (max-width: 768px) {
+            body     { height: auto; min-height: 100vh; overflow: auto; }
+            header   {
+                flex-wrap: wrap;
+                height: auto;
+                gap: 8px;
+                padding: 0.55rem 0.8rem;
+            }
+            .brand   { font-size: 0.95rem; gap: 6px; flex-wrap: wrap; }
+            .brand .brand-mark { display: none; }
+            .nav-actions { gap: 6px; flex-wrap: wrap; }
+            .nav-actions .btn { padding: 7px 12px; font-size: 0.72rem; }
+            .timer-chip { min-width: 0; padding: 5px 9px; font-size: 0.75rem; }
+            .timer-chip .timer-label { display: none; }
+
+            .workspace {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 64px);
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+            .left-pane, .right-pane { flex: 0 0 auto; width: 100%; min-width: 0; max-width: none; }
+            .left-pane  { min-height: 45vh; max-height: 60vh; }
+            .right-pane { gap: 0.5rem; }
+            .editor-env  { min-height: 40vh; }
+            .console-env { min-height: 45vh; }
+
+            .content-body { padding: 1rem 1.1rem; font-size: 0.88rem; line-height: 1.55; }
+            .content-body h1 { font-size: 1.25rem; }
+            .content-body h2 { font-size: 1.1rem; }
+            .content-body h3 { font-size: 1rem; }
+            .content-body pre { font-size: 0.76rem; padding: 0.75rem; }
+            table          { font-size: 0.8rem; }
+            thead th, tbody td { padding: 6px 8px; }
+
+            .panel-header { padding: 8px 12px; font-size: 0.66rem; letter-spacing: 0.14em; }
+            .tabs .tab   { padding: 8px 14px; font-size: 0.68rem; }
+            .reveal-gate { padding: 18px 14px; }
+            .reveal-msg  { font-size: 0.9rem; }
+            .sol-actions { gap: 6px; }
+            .sol-action-btn { padding: 5px 9px; font-size: 0.6rem; }
+            .sol-block { font-size: 0.74rem; padding: 10px 12px; }
+
+            .CodeMirror { font-size: 13px !important; }
+        }
+
+        /* ===========================
+           Responsive — tiny phone ≤420px
+           =========================== */
+        @media (max-width: 420px) {
+            .brand { font-size: 0.85rem; }
+            .brand em { font-size: 0.9em; }
+            .nav-actions .btn { padding: 6px 10px; font-size: 0.68rem; letter-spacing: 0.1em; }
+            .timer-chip { padding: 4px 7px; font-size: 0.7rem; gap: 4px; }
+            .content-body { padding: 0.85rem 0.95rem; }
+            .left-pane  { min-height: 38vh; }
+            .editor-env, .console-env { min-height: 38vh; }
+        }
     </style>
 </head>
 <body x-data="sqlApp()">
@@ -500,7 +632,20 @@
     <div class="workspace">
         
         <div class="panel left-pane">
-            <div class="panel-header"><span>◆ Problem</span></div>
+            <div class="panel-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                <span>◆ Problem</span>
+                <!-- Practice timer — pacing-aware; sits at top of every problem. -->
+                <span class="timer-wrap" style="display:inline-flex; align-items:center; gap:8px;">
+                    <span class="timer-chip" :class="timerPaceClass" :title="timerTitle">
+                        <span class="timer-label" x-text="timerLabel"></span>
+                        <span class="timer-value" x-text="timerDisplay">00:00</span>
+                    </span>
+                    <span class="timer-controls">
+                        <button class="timer-btn" @click="toggleTimer()" x-text="timerActive ? 'Pause' : 'Resume'" title="Pause / resume timer"></button>
+                        <button class="timer-btn" @click="resetTimer()" title="Reset timer">Reset</button>
+                    </span>
+                </span>
+            </div>
             <div class="content-body">
                 <template x-if="!dbLoaded">
                     <div>Loading problem data...</div>
@@ -671,11 +816,31 @@
                 solutionHTML: '',
                 explanationHTML: '',
                 copyLabel: 'Copy',
-                
+
+                // ── Practice timer ─────────────────────────────────────
+                // Seconds elapsed since the problem was opened. Pace class
+                // (ok / warn / over) is derived from `timerSeconds` vs the
+                // per-difficulty target: Easy = 10m, Medium = 20m, Hard = 30m.
+                timerSeconds: 0,
+                timerActive: false,
+                timerIntervalId: null,
+                timerDifficulty: 'Medium',
+                timerTargetSec: 20 * 60,
+
                 async init() {
                     const pData = dbMeta[this.slug];
                     if(pData) {
                         this.activeContent = `<h1>${pData.title}</h1> ${pData.content}`;
+                        // Pick the pacing target from the problem difficulty. When
+                        // opened inside the atlas overlay the bridge sets
+                        // window.__sandboxDifficulty from the practice-pill row;
+                        // otherwise fall back to pData or Medium.
+                        const diff = (typeof window !== 'undefined' && window.__sandboxDifficulty)
+                                     || (pData.difficulty || pData.diff || 'Medium');
+                        this.timerDifficulty = diff;
+                        this.timerTargetSec = diff === 'Easy' ? 10 * 60
+                                            : diff === 'Hard' ? 30 * 60
+                                            : 20 * 60;
                         // Build Solution + Explanation from shadow metadata
                         this.solutionSQL = (pData.shadow && pData.shadow.gold) ? pData.shadow.gold : '';
                         this.solutionHTML = this.highlightSQL(this.solutionSQL || '-- No reference solution configured for this problem.');
@@ -691,7 +856,10 @@
                     } else {
                         this.activeContent = `<h1>Problem not found</h1>`;
                     }
-                    
+
+                    // Kick off the practice timer now that difficulty is known.
+                    this.startTimer();
+
                     this.dbLoaded = true;
                     
                     _cmEditor = CodeMirror(document.getElementById('editorWrap'), {
@@ -765,6 +933,45 @@
                 
                 insertTemplate() {
                     _cmEditor.setValue("-- Write your MySQL query statement below\n");
+                },
+
+                // ── Timer helpers ───────────────────────────────────────
+                get timerDisplay() {
+                    const s = Math.max(0, this.timerSeconds | 0);
+                    const m = Math.floor(s / 60);
+                    const r = s % 60;
+                    return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+                },
+                get timerLabel() { return this.timerDifficulty || 'Timer'; },
+                get timerPaceClass() {
+                    if (!this.timerActive && this.timerSeconds === 0) return '';
+                    const pct = this.timerSeconds / (this.timerTargetSec || 1);
+                    const paused = !this.timerActive ? ' paused' : '';
+                    if (pct >= 1.0)  return 'pace-over' + paused;
+                    if (pct >= 0.6)  return 'pace-warn' + paused;
+                    return 'pace-ok' + paused;
+                },
+                get timerTitle() {
+                    const targetMin = Math.round((this.timerTargetSec || 0) / 60);
+                    return `${this.timerDifficulty} pacing target: ≤ ${targetMin} min`;
+                },
+                startTimer() {
+                    this.stopTimer();
+                    this.timerActive = true;
+                    this.timerIntervalId = setInterval(() => { this.timerSeconds += 1; }, 1000);
+                },
+                stopTimer() {
+                    if (this.timerIntervalId) {
+                        clearInterval(this.timerIntervalId);
+                        this.timerIntervalId = null;
+                    }
+                    this.timerActive = false;
+                },
+                toggleTimer() { this.timerActive ? this.stopTimer() : this.startTimer(); },
+                resetTimer() {
+                    this.stopTimer();
+                    this.timerSeconds = 0;
+                    this.startTimer();
                 },
 
                 escapeHTML(s) {
