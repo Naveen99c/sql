@@ -834,6 +834,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sql-formatter@15.4.11/dist/sql-formatter.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material-darker.min.css">
@@ -1097,7 +1099,16 @@ body.sandbox-open { overflow: hidden; }
             font-family: 'JetBrains Mono', monospace !important;
             letter-spacing: normal !important;
             font-variant-ligatures: none;
-        }#sandboxOverlay .cm-s-material-darker.CodeMirror { background: rgba(10,14,26,0.6) !important; }#sandboxOverlay .cm-s-material-darker .CodeMirror-gutters { background: rgba(10,14,26,0.75) !important; border-right: 1px solid var(--ink-line); }#sandboxOverlay .cm-s-material-darker .CodeMirror-linenumber { color: rgba(133,145,168,0.5); }#sandboxOverlay .cm-s-material-darker .cm-keyword { color: var(--amber); font-weight: 600; }#sandboxOverlay .cm-s-material-darker .cm-operator { color: var(--parchment); }#sandboxOverlay .cm-s-material-darker .cm-string { color: var(--teal); }#sandboxOverlay .cm-s-material-darker .cm-number { color: var(--rust); }#sandboxOverlay .cm-s-material-darker .cm-comment { color: var(--muted); font-style: italic; }#sandboxOverlay .cm-s-material-darker .cm-variable, #sandboxOverlay .cm-s-material-darker .cm-variable-2 { color: var(--parchment); }#sandboxOverlay .cm-s-material-darker .CodeMirror-cursor { border-left: 1.5px solid var(--amber); }#sandboxOverlay .cm-s-material-darker .CodeMirror-selected { background: rgba(229,166,59,0.15) !important; }#sandboxOverlay .btn {
+        }#sandboxOverlay .cm-s-material-darker.CodeMirror { background: rgba(10,14,26,0.6) !important; }#sandboxOverlay .cm-s-material-darker .CodeMirror-gutters { background: rgba(10,14,26,0.75) !important; border-right: 1px solid var(--ink-line); }#sandboxOverlay .cm-s-material-darker .CodeMirror-linenumber { color: rgba(133,145,168,0.5); }#sandboxOverlay .cm-s-material-darker .cm-keyword { color: var(--amber); font-weight: 600; }#sandboxOverlay .cm-s-material-darker .cm-operator { color: var(--parchment); }#sandboxOverlay .cm-s-material-darker .cm-string { color: var(--teal); }#sandboxOverlay .cm-s-material-darker .cm-number { color: var(--rust); }#sandboxOverlay .cm-s-material-darker .cm-comment { color: var(--muted); font-style: italic; }#sandboxOverlay .cm-s-material-darker .cm-variable, #sandboxOverlay .cm-s-material-darker .cm-variable-2 { color: var(--parchment); }#sandboxOverlay .cm-s-material-darker .CodeMirror-cursor { border-left: 1.5px solid var(--amber); }#sandboxOverlay .cm-s-material-darker .CodeMirror-matchingbracket {
+            color: var(--amber) !important;
+            background: rgba(255, 179, 71, 0.18);
+            border-bottom: 1px solid var(--amber);
+            font-weight: 700;
+        }#sandboxOverlay .cm-s-material-darker .CodeMirror-nonmatchingbracket {
+            color: #ff6b6b !important;
+            background: rgba(255, 107, 107, 0.18);
+            font-weight: 700;
+        }#sandboxOverlay .cm-s-material-darker .CodeMirror-selected { background: rgba(229,166,59,0.15) !important; }#sandboxOverlay .btn {
             border: 1px solid transparent;
             border-radius: 2px;
             padding: 8px 20px;
@@ -6504,7 +6515,12 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                         // to lineCount*lineHeight, rendering the lines wrapper
                         // with a phantom `top: Npx` offset. SQL queries wrap
                         // rarely — horizontal scroll is fine.
-                        lineWrapping: false
+                        lineWrapping: false,
+                        // Bracket helpers: highlight the matching partner
+                        // when the caret is beside a bracket, and auto-close
+                        // parens/quotes to keep pairs balanced while typing.
+                        matchBrackets: true,
+                        autoCloseBrackets: true
                     });
                     this.insertTemplate();
 
@@ -6910,12 +6926,20 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                     const src = _cmEditor.getValue();
                     if (!src.trim()) return;
                     try {
+                        // expressionWidth defaults to 50 which explodes
+                        // SUM(CASE WHEN ... END) across 8 lines. Raise it so
+                        // short function calls and CASE expressions stay inline.
+                        // denseOperators keeps arithmetic/comparison operators
+                        // tight instead of padded on newlines.
                         const pretty = sqlFormatter.format(src, {
                             language: 'mysql',
                             keywordCase: 'upper',
                             indentStyle: 'standard',
                             tabWidth: 4,
-                            linesBetweenQueries: 1
+                            linesBetweenQueries: 1,
+                            expressionWidth: 120,
+                            logicalOperatorNewline: 'before',
+                            denseOperators: false
                         });
                         const cursor = _cmEditor.getCursor();
                         _cmEditor.setValue(pretty);

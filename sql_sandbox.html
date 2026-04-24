@@ -8,6 +8,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/sql/sql.min.js"></script>
+    <!-- matchbrackets highlights the partner bracket when the caret is on one;
+         closebrackets auto-inserts the closing half when you type an opener. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
     <!-- sql-formatter drives the Format button in the editor toolbar. -->
     <script src="https://cdn.jsdelivr.net/npm/sql-formatter@15.4.11/dist/sql-formatter.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
@@ -243,6 +247,20 @@
         .cm-s-material-darker .cm-comment { color: var(--muted); font-style: italic; }
         .cm-s-material-darker .cm-variable, .cm-s-material-darker .cm-variable-2 { color: var(--parchment); }
         .cm-s-material-darker .CodeMirror-cursor { border-left: 1.5px solid var(--amber); }
+        /* Highlight the matching bracket partner when the caret is on one.
+           Amber outline + soft amber background so it stands out against
+           material-darker without being visually loud. */
+        .cm-s-material-darker .CodeMirror-matchingbracket {
+            color: var(--amber) !important;
+            background: rgba(255, 179, 71, 0.18);
+            border-bottom: 1px solid var(--amber);
+            font-weight: 700;
+        }
+        .cm-s-material-darker .CodeMirror-nonmatchingbracket {
+            color: #ff6b6b !important;
+            background: rgba(255, 107, 107, 0.18);
+            font-weight: 700;
+        }
         .cm-s-material-darker .CodeMirror-selected { background: rgba(229,166,59,0.15) !important; }
 
         /* Run / Submit */
@@ -971,7 +989,12 @@
                         // to lineCount*lineHeight, rendering the lines wrapper
                         // with a phantom `top: Npx` offset. SQL queries wrap
                         // rarely — horizontal scroll is fine.
-                        lineWrapping: false
+                        lineWrapping: false,
+                        // Bracket helpers: highlight the matching partner
+                        // when the caret is beside a bracket, and auto-close
+                        // parens/quotes to keep pairs balanced while typing.
+                        matchBrackets: true,
+                        autoCloseBrackets: true
                     });
                     this.insertTemplate();
 
@@ -1377,12 +1400,20 @@
                     const src = _cmEditor.getValue();
                     if (!src.trim()) return;
                     try {
+                        // expressionWidth defaults to 50 which explodes
+                        // SUM(CASE WHEN ... END) across 8 lines. Raise it so
+                        // short function calls and CASE expressions stay inline.
+                        // denseOperators keeps arithmetic/comparison operators
+                        // tight instead of padded on newlines.
                         const pretty = sqlFormatter.format(src, {
                             language: 'mysql',
                             keywordCase: 'upper',
                             indentStyle: 'standard',
                             tabWidth: 4,
-                            linesBetweenQueries: 1
+                            linesBetweenQueries: 1,
+                            expressionWidth: 120,
+                            logicalOperatorNewline: 'before',
+                            denseOperators: false
                         });
                         const cursor = _cmEditor.getCursor();
                         _cmEditor.setValue(pretty);
