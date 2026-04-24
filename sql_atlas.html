@@ -2365,17 +2365,49 @@
     </script>
 <script>
     (function () {
-        // Reserved words we never want to surface as "column" candidates even
-        // if they appear in a table's column list (defensive — shouldn't).
+        // Reserved words + common SQL functions. Includes both SQLite-native
+        // names (strftime, julianday, printf, ifnull) AND MySQL-style aliases
+        // (DATE_FORMAT, NOW, CURDATE, DATEDIFF, CONCAT, …) so the learner can
+        // type what they know from tutorials and still see a suggestion.
+        // These also act as a deny-list when we strip keywords out of the
+        // "columns" bucket (defensive — real schemas shouldn't name columns
+        // after SQL verbs, but if they do we don't want to rank them as data).
         var SQL_KEYWORDS = [
+            // Clauses
             'SELECT','FROM','WHERE','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET',
             'JOIN','LEFT JOIN','RIGHT JOIN','INNER JOIN','OUTER JOIN','CROSS JOIN',
             'FULL JOIN','ON','USING','AS','WITH','RECURSIVE',
+            // Predicates
             'AND','OR','NOT','IN','EXISTS','BETWEEN','LIKE','IS NULL','IS NOT NULL',
+            // Control flow
             'CASE','WHEN','THEN','ELSE','END',
+            // Set ops
             'UNION','UNION ALL','INTERSECT','EXCEPT','DISTINCT','ALL',
-            'COUNT','SUM','AVG','MIN','MAX','COALESCE','NULLIF','CAST',
+            // Aggregates
+            'COUNT','SUM','AVG','MIN','MAX','GROUP_CONCAT','TOTAL',
+            // Null handling + casting
+            'COALESCE','NULLIF','IFNULL','CAST',
+            // Window functions
             'ROW_NUMBER','RANK','DENSE_RANK','LAG','LEAD','OVER','PARTITION BY',
+            'FIRST_VALUE','LAST_VALUE','NTH_VALUE','NTILE','CUME_DIST','PERCENT_RANK',
+            // Date / time — SQLite native
+            'STRFTIME','DATE','TIME','DATETIME','JULIANDAY','UNIXEPOCH',
+            // Date / time — MySQL-style (frequently taught in tutorials)
+            'DATE_FORMAT','STR_TO_DATE','NOW','CURDATE','CURRENT_DATE','CURTIME',
+            'CURRENT_TIME','CURRENT_TIMESTAMP','DATE_ADD','DATE_SUB','DATEDIFF',
+            'TIMESTAMPDIFF','TIMESTAMPADD','EXTRACT','YEAR','MONTH','DAY','HOUR',
+            'MINUTE','SECOND','WEEK','QUARTER','DAYOFWEEK','DAYOFYEAR','WEEKDAY',
+            'DAYNAME','MONTHNAME','LAST_DAY',
+            // String functions
+            'UPPER','LOWER','LENGTH','CHAR_LENGTH','SUBSTR','SUBSTRING','TRIM',
+            'LTRIM','RTRIM','REPLACE','CONCAT','CONCAT_WS','INSTR','LEFT','RIGHT',
+            'LPAD','RPAD','REVERSE','PRINTF','FORMAT','REGEXP','REGEXP_LIKE',
+            // Math functions
+            'ABS','ROUND','CEIL','CEILING','FLOOR','POWER','POW','SQRT','MOD',
+            'RANDOM','RAND','SIGN','EXP','LN','LOG','LOG10','PI',
+            // Conditional helpers
+            'IIF','IF','IFNULL','NULLIF',
+            // Sort / constants
             'ASC','DESC','TRUE','FALSE','NULL'
         ];
         // Single-word clause markers we recognise when scanning backward. These
@@ -2435,6 +2467,291 @@
                 i++;
             }
             return clause;
+        }
+
+        // ---- String / comment / paren-aware scanners ---------------------
+        // Advance past the string or comment token that starts at index `i`.
+        // Returns the new index (one past the closing delimiter). If `i`
+        // isn't at a string/comment start, returns `i` unchanged — callers
+        // can use this idempotently inside their own scan loops.
+        function skipStringComment(text, i) {
+            var n = text.length, c = text[i];
+            if (c === '-' && text[i+1] === '-') {
+                var e = text.indexOf('\n', i);
+                return e < 0 ? n : e;
+            }
+            if (c === '/' && text[i+1] === '*') {
+                var e2 = text.indexOf('*/', i+2);
+                return e2 < 0 ? n : e2 + 2;
+            }
+            if (c === "'" || c === '"' || c === '`') {
+                var q = c, j = i + 1;
+                while (j < n) {
+                    if (text[j] === q) {
+                        // doubled quote = escaped literal ('' or "")
+                        if (text[j+1] === q) { j += 2; continue; }
+                        return j + 1;
+                    }
+                    if (text[j] === '\\') { j += 2; continue; }
+                    j++;
+                }
+                return n;
+            }
+            return i;
+        }
+
+        // Skip whitespace + line/block comments. Returns new index.
+        function skipWs(text, i) {
+            var n = text.length;
+            while (i < n) {
+                var c = text[i];
+                if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { i++; continue; }
+                if (c === '-' && text[i+1] === '-') { i = skipStringComment(text, i); continue; }
+                if (c === '/' && text[i+1] === '*') { i = skipStringComment(text, i); continue; }
+                break;
+            }
+            return i;
+        }
+
+        // Given the index of an opening '(', return the index of its matching
+        // closing ')' (respecting nested parens, strings, comments). -1 if
+        // unbalanced.
+        function matchParen(text, openIdx) {
+            var n = text.length, depth = 0, i = openIdx;
+            while (i < n) {
+                var c = text[i];
+                if (c === "'" || c === '"' || c === '`' ||
+                    (c === '-' && text[i+1] === '-') ||
+                    (c === '/' && text[i+1] === '*')) {
+                    i = skipStringComment(text, i);
+                    continue;
+                }
+                if (c === '(') depth++;
+                else if (c === ')') { depth--; if (depth === 0) return i; }
+                i++;
+            }
+            return -1;
+        }
+
+        // Find the next case-insensitive word-boundary match of `kw` at paren
+        // depth 0, starting at or after `startIdx`. Skips strings/comments.
+        // Returns the match index or -1 if not found.
+        function findKwAtDepthZero(text, kw, startIdx) {
+            var n = text.length, depth = 0, i = Math.max(0, startIdx || 0);
+            var kwLen = kw.length, kwUp = kw.toUpperCase();
+            while (i < n) {
+                var c = text[i];
+                if (c === "'" || c === '"' || c === '`' ||
+                    (c === '-' && text[i+1] === '-') ||
+                    (c === '/' && text[i+1] === '*')) {
+                    i = skipStringComment(text, i);
+                    continue;
+                }
+                if (c === '(') { depth++; i++; continue; }
+                if (c === ')') { depth--; i++; continue; }
+                if (depth === 0 && /[A-Za-z_]/.test(c)) {
+                    var prev = i > 0 ? text[i-1] : ' ';
+                    if (!/[A-Za-z0-9_]/.test(prev)) {
+                        var slice = text.substr(i, kwLen).toUpperCase();
+                        var nextCh = text[i + kwLen] || ' ';
+                        if (slice === kwUp && !/[A-Za-z0-9_]/.test(nextCh)) return i;
+                    }
+                    // advance past the rest of this identifier
+                    while (i < n && /[A-Za-z0-9_]/.test(text[i])) i++;
+                    continue;
+                }
+                i++;
+            }
+            return -1;
+        }
+
+        // Split `s` on top-level commas (depth 0, not inside strings/comments).
+        // Keeps empty trailing segments out.
+        function splitTopLevelCommas(s) {
+            var out = [], buf = '', depth = 0, i = 0, n = s.length;
+            while (i < n) {
+                var c = s[i];
+                if (c === "'" || c === '"' || c === '`' ||
+                    (c === '-' && s[i+1] === '-') ||
+                    (c === '/' && s[i+1] === '*')) {
+                    var j = skipStringComment(s, i);
+                    buf += s.slice(i, j);
+                    i = j;
+                    continue;
+                }
+                if (c === '(') { depth++; buf += c; i++; continue; }
+                if (c === ')') { depth--; buf += c; i++; continue; }
+                if (c === ',' && depth === 0) { out.push(buf); buf = ''; i++; continue; }
+                buf += c; i++;
+            }
+            if (buf.trim()) out.push(buf);
+            return out;
+        }
+
+        // Extract the output column name from a single select-list item. We
+        // only return names we're confident about:
+        //   * trailing "AS alias" wins
+        //   * a bare identifier ("foo") or qualified "tbl.col" uses the last
+        //     identifier as the output name
+        //   * bare aliases without AS, or expressions without aliases, return
+        //     null (too ambiguous — we'd rather offer fewer good suggestions
+        //     than fill the popover with noise).
+        function extractItemName(item) {
+            var s = item.trim();
+            if (!s || s === '*') return null;
+            // "tbl.*" — no single column name comes out of this.
+            if (/\.\*$/.test(s)) return null;
+            var asMatch = /\s+AS\s+([A-Za-z_][\w]*)\s*$/i.exec(s);
+            if (asMatch) return asMatch[1];
+            if (/^[A-Za-z_][\w]*(\.[A-Za-z_][\w]*)?$/.test(s)) {
+                var parts = s.split('.');
+                return parts[parts.length - 1];
+            }
+            return null;
+        }
+
+        // Given the raw body of a CTE / subquery (text between the outer
+        // parens), walk to its outermost SELECT and collect every output
+        // column name we can resolve via extractItemName. Returns a (possibly
+        // empty) array in source order.
+        function extractSelectColumns(body) {
+            var selIdx = findKwAtDepthZero(body, 'SELECT', 0);
+            if (selIdx < 0) return [];
+            var listStart = selIdx + 'SELECT'.length;
+            // Skip a leading DISTINCT / ALL modifier.
+            var tail = body.slice(listStart);
+            var mod = /^\s*(DISTINCT|ALL)\b/i.exec(tail);
+            if (mod) listStart += mod[0].length;
+            // List ends at the next top-level FROM / WHERE / GROUP / ORDER /
+            // HAVING / LIMIT / OFFSET / WINDOW — whichever comes first.
+            var terminators = ['FROM','WHERE','GROUP','ORDER','HAVING','LIMIT','OFFSET','WINDOW'];
+            var listEnd = body.length;
+            for (var k = 0; k < terminators.length; k++) {
+                var idx = findKwAtDepthZero(body, terminators[k], listStart);
+                if (idx >= 0 && idx < listEnd) listEnd = idx;
+            }
+            var items = splitTopLevelCommas(body.slice(listStart, listEnd));
+            var cols = [];
+            for (var j = 0; j < items.length; j++) {
+                var name = extractItemName(items[j]);
+                if (name) cols.push(name);
+            }
+            return cols;
+        }
+
+        // Parse every WITH [RECURSIVE] name [(cols)] AS ( body ) [, …]
+        // declaration anywhere in the buffer and resolve each CTE's output
+        // columns. Returns { lowerName: { name, cols } }.
+        //
+        // We scan for every top-level WITH keyword (not just the first), which
+        // is technically more than SQL allows in a single statement — but the
+        // editor buffer often contains multiple statements or scratch work,
+        // and we'd rather recognise too many than too few.
+        function detectCtes(text) {
+            var out = {};
+            var start = 0, n = text.length;
+            while (true) {
+                var w = findKwAtDepthZero(text, 'WITH', start);
+                if (w < 0) break;
+                var i = skipWs(text, w + 'WITH'.length);
+                // Optional RECURSIVE.
+                if (text.substr(i, 9).toUpperCase() === 'RECURSIVE' &&
+                    !/[A-Za-z0-9_]/.test(text[i+9] || ' ')) {
+                    i = skipWs(text, i + 9);
+                }
+                // Walk the comma-separated CTE list until we hit a binding
+                // we can't parse (then resume the outer scan from there).
+                while (i < n) {
+                    var nameMatch = /^[A-Za-z_][\w]*/.exec(text.slice(i));
+                    if (!nameMatch) break;
+                    var cteName = nameMatch[0];
+                    i += cteName.length;
+                    i = skipWs(text, i);
+                    var explicitCols = null;
+                    if (text[i] === '(') {
+                        var close = matchParen(text, i);
+                        if (close < 0) break;
+                        explicitCols = splitTopLevelCommas(text.slice(i + 1, close))
+                            .map(function (s) { return s.trim().replace(/[`"[\]]/g, ''); })
+                            .filter(Boolean);
+                        i = skipWs(text, close + 1);
+                    }
+                    if (text.substr(i, 2).toUpperCase() !== 'AS' ||
+                        /[A-Za-z0-9_]/.test(text[i+2] || ' ')) break;
+                    i = skipWs(text, i + 2);
+                    if (text[i] !== '(') break;
+                    var bClose = matchParen(text, i);
+                    if (bClose < 0) break;
+                    var body = text.slice(i + 1, bClose);
+                    var cols = (explicitCols && explicitCols.length)
+                        ? explicitCols
+                        : extractSelectColumns(body);
+                    out[cteName.toLowerCase()] = { name: cteName, cols: cols || [] };
+                    i = skipWs(text, bClose + 1);
+                    if (text[i] === ',') { i = skipWs(text, i + 1); continue; }
+                    break;
+                }
+                start = i > w ? i : w + 1;
+            }
+            return out;
+        }
+
+        // Detect `FROM (SELECT …) [AS] alias` and `JOIN (SELECT …) [AS] alias`.
+        // Returns { aliasLower: { cols: [...] } } for each subquery alias we
+        // can resolve. These behave like ad-hoc CTEs for qualified completion.
+        function detectSubqueryAliases(text) {
+            var out = {};
+            var n = text.length, depth = 0, i = 0;
+            while (i < n) {
+                var c = text[i];
+                if (c === "'" || c === '"' || c === '`' ||
+                    (c === '-' && text[i+1] === '-') ||
+                    (c === '/' && text[i+1] === '*')) {
+                    i = skipStringComment(text, i);
+                    continue;
+                }
+                if (c === '(') { depth++; i++; continue; }
+                if (c === ')') { depth--; i++; continue; }
+                if (depth === 0 && /[A-Za-z_]/.test(c)) {
+                    var prev = i > 0 ? text[i-1] : ' ';
+                    if (!/[A-Za-z0-9_]/.test(prev)) {
+                        var word = /^[A-Za-z_]\w*/.exec(text.slice(i));
+                        if (word) {
+                            var w = word[0].toUpperCase();
+                            if (w === 'FROM' || w === 'JOIN') {
+                                var j = skipWs(text, i + word[0].length);
+                                if (text[j] === '(') {
+                                    var close = matchParen(text, j);
+                                    if (close >= 0) {
+                                        var body = text.slice(j + 1, close);
+                                        var k = skipWs(text, close + 1);
+                                        // Optional AS
+                                        if (text.substr(k, 2).toUpperCase() === 'AS' &&
+                                            !/[A-Za-z0-9_]/.test(text[k+2] || ' ')) {
+                                            k = skipWs(text, k + 2);
+                                        }
+                                        var am = /^[A-Za-z_]\w*/.exec(text.slice(k));
+                                        if (am && !CLAUSE_KW.has(am[0].toUpperCase())) {
+                                            out[am[0].toLowerCase()] = {
+                                                name: am[0],
+                                                cols: extractSelectColumns(body)
+                                            };
+                                        }
+                                        i = close + 1;
+                                        continue;
+                                    }
+                                }
+                            }
+                            i += word[0].length;
+                            continue;
+                        }
+                    }
+                    while (i < n && /[A-Za-z0-9_]/.test(text[i])) i++;
+                    continue;
+                }
+                i++;
+            }
+            return out;
         }
 
         // Parse the entire buffer for "FROM TableName [AS] alias" and
@@ -2497,17 +2814,52 @@
             var tail = tailMatch ? tailMatch[1] || '' : '';
             var tailStart = cur.ch - tail.length;
 
-            // Shared knobs
-            var tables = (options && options.tables) || {};
-            var aliases = detectAliases(cm.getValue());
+            // Shared knobs. We start from the schema tables the editor was
+            // configured with, then graft on:
+            //   * every CTE declared via WITH … AS (…)  → becomes a pseudo-
+            //     table with its SELECT-list output columns,
+            //   * every subquery alias `FROM (…) AS sub` → same treatment.
+            // That way the rest of the ranker ("tables bucket", alias→table
+            // resolution, `alias.col` qualified completion) already handles
+            // CTEs without further branching.
+            var schemaTables = (options && options.tables) || {};
+            var fullText = cm.getValue();
+            var ctes = detectCtes(fullText);
+            var subqs = detectSubqueryAliases(fullText);
+            var tables = {};
+            // Copy schema tables first so real tables win if a CTE happens to
+            // share a name (SQL shadows the schema with the CTE, but for the
+            // purposes of column suggestions the CTE's own columns are what
+            // the query will reference — so let CTE overwrite).
+            Object.keys(schemaTables).forEach(function (t) { tables[t] = schemaTables[t]; });
+            Object.keys(ctes).forEach(function (k) {
+                var c = ctes[k];
+                tables[c.name] = c.cols;
+            });
+            Object.keys(subqs).forEach(function (k) {
+                var s = subqs[k];
+                // Only register the subquery alias itself (not as a real
+                // table) — we look it up via the alias map below.
+                if (!tables[s.name]) tables[s.name] = s.cols;
+            });
+            // Alias map now includes subquery aliases — their "real table"
+            // is themselves (they were just registered in `tables` above).
+            var aliases = detectAliases(fullText);
+            Object.keys(subqs).forEach(function (k) { aliases[k] = subqs[k].name; });
             var fullBefore = cm.getRange({ line: 0, ch: 0 }, cur);
             var clause = detectClause(fullBefore);
 
-            // Qualified completion: "alias." or "alias.col"
+            // Qualified completion: "alias." or "alias.col". Resolution order:
+            //   1. aliases map (FROM/JOIN/subquery aliases)
+            //   2. CTE name directly (no alias needed)
+            //   3. bare table name in the schema
             var qual = /([A-Za-z_][\w]*)\.([A-Za-z_]\w*)?$/.exec(before);
             if (qual) {
                 var aliasTok = qual[1], colPrefix = (qual[2] || '').toLowerCase();
-                var realTable = aliases[aliasTok.toLowerCase()] || aliasTok;
+                var aliasLower = aliasTok.toLowerCase();
+                var realTable = aliases[aliasLower] ||
+                                (ctes[aliasLower] && ctes[aliasLower].name) ||
+                                aliasTok;
                 // Find table name in a case-insensitive way against the known tables.
                 var tkey = Object.keys(tables).find(function (k) {
                     return k.toLowerCase() === realTable.toLowerCase();
