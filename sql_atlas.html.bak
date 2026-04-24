@@ -719,6 +719,188 @@
   }
   .guide-body a.xref:hover { color: var(--amber-hot); text-decoration-color: var(--amber); }
 
+  /* =====================================================================
+     QUIZ CARDS — inline theory / guess-the-output / scenario MCQs. Each
+     block is a self-contained <div class="quiz"> authored directly in the
+     markdown source; the JS renderer transforms it into a clickable widget
+     with instant correct/wrong feedback and an explanation reveal. Progress
+     persists under localStorage `atlas.quiz.<id>` so the user sees their
+     previously chosen answer when they return.
+     ===================================================================== */
+  .guide-body .quiz {
+    margin: 1.4rem 0;
+    padding: 1rem 1.15rem 1.1rem;
+    background: linear-gradient(180deg, rgba(229,166,59,0.06), rgba(12,18,32,0.55));
+    border: 1px solid rgba(229,166,59,0.28);
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(12,18,32,0.35) inset,
+                0 8px 28px rgba(0,0,0,0.28);
+    position: relative;
+  }
+  .guide-body .quiz::before {
+    content: "❓";
+    position: absolute;
+    top: -12px; left: 14px;
+    background: var(--ink);
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(229,166,59,0.35);
+    font-size: 0.8rem;
+  }
+  .guide-body .quiz-kind {
+    display: inline-block;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 600;
+    margin-bottom: 6px;
+    padding: 2px 8px;
+    border: 1px solid rgba(229,166,59,0.4);
+    border-radius: 4px;
+    background: rgba(229,166,59,0.08);
+  }
+  .guide-body .quiz-q {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--parchment);
+    margin: 0.3rem 0 0.8rem;
+    line-height: 1.55;
+  }
+  /* Embedded SQL / data blocks inside a quiz are more compact than prose <pre>. */
+  .guide-body .quiz pre {
+    margin: 0.4rem 0 0.8rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(12,18,32,0.6);
+    border: 1px solid var(--ink-line);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .guide-body .quiz .quiz-data-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--parchment-dim);
+    margin: 0.5rem 0 0.2rem;
+    font-weight: 500;
+  }
+  .guide-body .quiz-opts {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .guide-body .quiz-opts li {
+    margin: 0 !important;
+    padding: 9px 40px 9px 34px;
+    background: rgba(12,18,32,0.55);
+    border: 1px solid var(--ink-line);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    color: var(--parchment);
+    transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
+    position: relative;
+    line-height: 1.45;
+    user-select: none;
+  }
+  /* Letter badge (A/B/C/D) rendered via JS into data-letter. */
+  .guide-body .quiz-opts li::before {
+    content: attr(data-letter);
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(229,166,59,0.45);
+    color: var(--amber);
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0;
+  }
+  .guide-body .quiz-opts li:hover:not(.is-locked) {
+    border-color: rgba(229,166,59,0.55);
+    background: rgba(229,166,59,0.08);
+    transform: translateX(2px);
+  }
+  .guide-body .quiz-opts li.is-correct {
+    border-color: var(--teal);
+    background: rgba(103,201,192,0.12);
+    color: var(--teal);
+    font-weight: 500;
+  }
+  .guide-body .quiz-opts li.is-correct::after {
+    content: "✓";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--teal);
+    font-weight: 700;
+  }
+  .guide-body .quiz-opts li.is-wrong {
+    border-color: var(--rust);
+    background: rgba(210,106,77,0.12);
+    color: var(--rust);
+  }
+  .guide-body .quiz-opts li.is-wrong::after {
+    content: "✕";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--rust);
+    font-weight: 700;
+  }
+  .guide-body .quiz-opts li.is-locked { cursor: default; }
+  .guide-body .quiz-opts li.is-locked:not(.is-correct):not(.is-wrong) { opacity: 0.55; }
+  .guide-body .quiz-why {
+    display: none;
+    margin-top: 0.9rem;
+    padding: 0.75rem 0.9rem;
+    background: rgba(103,201,192,0.08);
+    border-left: 3px solid var(--teal);
+    border-radius: 4px;
+    font-size: 0.88rem;
+    color: var(--parchment-dim);
+    line-height: 1.55;
+  }
+  .guide-body .quiz-why strong { color: var(--teal); }
+  .guide-body .quiz-why code {
+    background: rgba(12,18,32,0.7);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+  }
+  .guide-body .quiz.is-answered .quiz-why { display: block; }
+  .guide-body .quiz-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.7rem;
+    font-size: 0.72rem;
+    color: var(--parchment-dim);
+  }
+  .guide-body .quiz-reset {
+    background: none;
+    border: 1px solid var(--ink-line);
+    color: var(--parchment-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 120ms ease;
+  }
+  .guide-body .quiz-reset:hover { border-color: var(--amber); color: var(--amber); }
+
   /* dimmed for facet filter */
   .tree-dim > summary { opacity: 0.28; filter: grayscale(0.3); }
 
@@ -901,6 +1083,7 @@
     <div class="flex flex-wrap gap-3 reveal" style="animation-delay:.35s">
       <span class="chip" title="Phase 0 – Phase 6 plus a Quick Reference: mental model, schema, core patterns, windows, advanced patterns, data types, performance.">7 Phases</span>
       <span class="chip teal" id="chipProblems" title="Every problem runs in an in-browser SQLite sandbox with a hidden edge-case validator.">58 Problems</span>
+      <span class="chip" id="chipQuizzes" title="Multiple-choice quiz questions — guess-the-output and 'make-this-query-faster' scenarios. Progress tracked separately from problems.">0 Quizzes</span>
       <span class="chip rust" title="Your query is scored against a gold query across multiple datasets — not just the visible example. A pass means your query handles ties, NULLs, and empty groups.">Hidden Edge-Case Validator</span>
       <span class="chip muted" title="⌘K opens the jump palette · ?j / ?k move between sections · / focuses the filter.">⌘K to search · ?j for next section</span>
     </div>
@@ -925,6 +1108,11 @@
           <div class="mono text-lg"><span id="progPct">0</span>%</div>
           <div class="text-xs text-[color:var(--muted)]"><span id="progCount">0</span> / <span id="progTotal">58</span> solved</div>
         </div>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 mt-2 text-xs text-[color:var(--muted)]" title="Multiple-choice quiz questions answered correctly across the guide. Tracked separately from problems.">
+        <span class="chip muted" id="quizProgChip">0 / 0 MCQ</span>
+        <span>correct</span>
       </div>
 
       <div class="flex gap-2 px-3 mt-3">
@@ -1328,6 +1516,117 @@ function decorate(root) {
       pre.appendChild(btn);
     }
   });
+
+  // quiz widgets — wire up click handlers, render option letters, restore state
+  decorateQuizzes(root);
+}
+
+/* =====================================================================
+   QUIZ WIDGETS — transforms authored <div class="quiz"> blocks into
+   interactive MCQs. Authors write pure semantic HTML in the markdown:
+
+     <div class="quiz" data-quiz-id="logical-order-1">
+       <div class="quiz-kind">Theory</div>
+       <div class="quiz-q">Question prose…</div>
+       <ol class="quiz-opts">
+         <li>Wrong answer</li>
+         <li data-correct>Right answer</li>
+       </ol>
+       <div class="quiz-why">Explanation revealed after picking an option.</div>
+     </div>
+
+   The renderer adds A/B/C/D badges via data-letter, binds a click handler
+   that locks the quiz on first pick, marks correct/wrong, reveals the
+   explanation, and persists the choice under localStorage `atlas.quiz.<id>`.
+   ===================================================================== */
+const QUIZ_KEY = (id) => `atlas.quiz.${id}`;
+function getQuizAnswer(id) {
+  try { return JSON.parse(localStorage.getItem(QUIZ_KEY(id)) || "null"); }
+  catch (_) { return null; }
+}
+function setQuizAnswer(id, payload) {
+  try { localStorage.setItem(QUIZ_KEY(id), JSON.stringify(payload)); } catch (_) {}
+}
+function clearQuizAnswer(id) {
+  try { localStorage.removeItem(QUIZ_KEY(id)); } catch (_) {}
+}
+function decorateQuizzes(root) {
+  root.querySelectorAll(".quiz[data-quiz-id]").forEach(quiz => {
+    if (quiz.dataset.quizWired === "1") return;
+    quiz.dataset.quizWired = "1";
+
+    const id = quiz.dataset.quizId;
+    const opts = [...quiz.querySelectorAll(".quiz-opts > li")];
+    // Stamp A/B/C/D letter badges (decorative, via CSS ::before content: attr).
+    const LETTERS = "ABCDEFGH";
+    opts.forEach((li, i) => { li.dataset.letter = LETTERS[i] || String(i+1); });
+
+    // If the author didn't supply a footer, add a tiny reset control so a
+    // user who mis-clicked can start over. Also a "pick to reveal" hint.
+    if (!quiz.querySelector(".quiz-footer")) {
+      const foot = document.createElement("div");
+      foot.className = "quiz-footer";
+      const hint = document.createElement("span");
+      hint.className = "quiz-hint";
+      hint.textContent = "Pick an option to reveal the explanation.";
+      const reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "quiz-reset";
+      reset.textContent = "Reset";
+      foot.append(hint, reset);
+      quiz.appendChild(foot);
+    }
+
+    function lockWithChoice(chosenIdx) {
+      opts.forEach((li, i) => {
+        const isCorrect = li.hasAttribute("data-correct");
+        li.classList.add("is-locked");
+        if (i === chosenIdx) {
+          li.classList.add(isCorrect ? "is-correct" : "is-wrong");
+        } else if (isCorrect) {
+          // Also surface the right answer even if the user picked wrong.
+          li.classList.add("is-correct");
+        }
+      });
+      quiz.classList.add("is-answered");
+      const hint = quiz.querySelector(".quiz-hint");
+      if (hint) {
+        const rightIdx = opts.findIndex(li => li.hasAttribute("data-correct"));
+        const picked = opts[chosenIdx];
+        const correct = picked && picked.hasAttribute("data-correct");
+        hint.textContent = correct
+          ? "✓ Correct — " + LETTERS[chosenIdx]
+          : "✕ You picked " + LETTERS[chosenIdx] + " · correct answer is " + LETTERS[rightIdx];
+      }
+    }
+    function resetQuiz() {
+      opts.forEach(li => li.classList.remove("is-locked", "is-correct", "is-wrong"));
+      quiz.classList.remove("is-answered");
+      const hint = quiz.querySelector(".quiz-hint");
+      if (hint) hint.textContent = "Pick an option to reveal the explanation.";
+      clearQuizAnswer(id);
+    }
+
+    opts.forEach((li, i) => {
+      li.addEventListener("click", () => {
+        if (quiz.classList.contains("is-answered")) return;
+        lockWithChoice(i);
+        setQuizAnswer(id, { chosen: i, correct: li.hasAttribute("data-correct"), at: Date.now() });
+        document.dispatchEvent(new CustomEvent("atlas:quiz-answered", { detail: { id } }));
+      });
+    });
+    const resetBtn = quiz.querySelector(".quiz-reset");
+    if (resetBtn) resetBtn.addEventListener("click", () => {
+      resetQuiz();
+      document.dispatchEvent(new CustomEvent("atlas:quiz-answered", { detail: { id, reset: true } }));
+    });
+
+    // Restore any previous answer so refresh doesn't erase progress.
+    const prev = getQuizAnswer(id);
+    if (prev && typeof prev.chosen === "number" && opts[prev.chosen]) {
+      lockWithChoice(prev.chosen);
+    }
+  });
 }
 
 /* =====================================================================
@@ -1394,6 +1693,22 @@ function computeAndPaintMeta(nodes) {
       solvedHtml = `<span class="chip muted">${solved}/${uniq.length} ▶</span>`;
     }
 
+    // separate quiz aggregate: "X/Y ?" — counted independently from problems
+    let quizHtml = "";
+    if (!slug) {
+      const quizzes = node.querySelectorAll(".quiz[data-quiz-id]");
+      if (quizzes.length > 0) {
+        let qDone = 0, qCorrect = 0;
+        quizzes.forEach(q => {
+          const ans = getQuizAnswer(q.dataset.quizId);
+          if (ans) { qDone++; if (ans.correct) qCorrect++; }
+        });
+        const qCls = qDone === 0 ? "muted"
+                   : qCorrect === quizzes.length ? "teal" : "";
+        quizHtml = `<span class="chip ${qCls}" data-quiz-chip="1" title="Multiple-choice quizzes answered correctly in this section">${qCorrect}/${quizzes.length} MCQ</span>`;
+      }
+    }
+
     // difficulty chip logic:
     //  • leaf problem: single chip of its own difficulty
     //  • section/phase WITH a practice table: show histogram "12M · 5H"
@@ -1424,7 +1739,7 @@ function computeAndPaintMeta(nodes) {
     if (isPreamble) {
       meta.innerHTML = "";
     } else {
-      meta.innerHTML = statusHtml + diffHtml + patChipsHtml + solvedHtml;
+      meta.innerHTML = statusHtml + diffHtml + patChipsHtml + solvedHtml + quizHtml;
     }
 
     // dataset tags for filter
@@ -1716,6 +2031,24 @@ function updateProgress() {
   if (chip) chip.textContent = `${uniq.length} Problems`;
   const footer = document.getElementById("footerProblemCount");
   if (footer) footer.textContent = String(uniq.length);
+
+  // --- SEPARATE quiz progress (NOT merged into the problem ring) -------
+  const quizEls = document.querySelectorAll(".quiz[data-quiz-id]");
+  let qTotal = 0, qCorrect = 0;
+  quizEls.forEach(q => {
+    qTotal++;
+    const ans = getQuizAnswer(q.dataset.quizId);
+    if (ans && ans.correct) qCorrect++;
+  });
+  const quizChip = document.getElementById("quizProgChip");
+  if (quizChip) {
+    quizChip.textContent = `${qCorrect} / ${qTotal} MCQ`;
+    quizChip.classList.remove("teal", "muted");
+    if (qTotal > 0 && qCorrect === qTotal) quizChip.classList.add("teal");
+    else if (qCorrect === 0) quizChip.classList.add("muted");
+  }
+  const landingQuiz = document.getElementById("chipQuizzes");
+  if (landingQuiz) landingQuiz.textContent = `${qTotal} Quizzes`;
 }
 
 /* =====================================================================
@@ -1727,6 +2060,13 @@ function onScroll() {
   $("#readbar").style.width = (pct * 100) + "%";
 }
 window.addEventListener("scroll", onScroll, { passive: true });
+
+// Live-refresh quiz chips + header counter whenever a quiz is answered/reset.
+document.addEventListener("atlas:quiz-answered", () => {
+  const nodes = $$("#guide details");
+  computeAndPaintMeta(nodes.filter(n => n.dataset.title));
+  updateProgress();
+});
 
 /* =====================================================================
    RENDER
@@ -1785,10 +2125,19 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#expandAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = true));
   $("#collapseAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = false));
   $("#resetProg").addEventListener("click", () => {
-    if (!confirm("Clear all progress for every problem?")) return;
-    Object.keys(localStorage).filter(k => k.startsWith("atlas.status.") || k === "atlas.lastSlug").forEach(k => localStorage.removeItem(k));
-    $$("#guide details").forEach(d => {
-      delete d.dataset.status;
+    if (!confirm("Clear all progress — problems AND quizzes?")) return;
+    Object.keys(localStorage).filter(k =>
+      k.startsWith("atlas.status.") || k.startsWith("atlas.quiz.") || k === "atlas.lastSlug"
+    ).forEach(k => localStorage.removeItem(k));
+    $$("#guide details").forEach(d => { delete d.dataset.status; });
+    // Visually un-lock every quiz so UI matches the cleared storage.
+    $$(".quiz.is-answered").forEach(q => {
+      q.classList.remove("is-answered");
+      q.querySelectorAll(".quiz-opts > li").forEach(li => {
+        li.classList.remove("is-locked", "is-correct", "is-wrong");
+      });
+      const hint = q.querySelector(".quiz-hint");
+      if (hint) hint.textContent = "Pick an option to reveal the explanation.";
     });
     const nodes = $$("#guide details");
     computeAndPaintMeta(nodes.filter(n => n.dataset.title));
@@ -2003,6 +2352,30 @@ Many bugs come from assuming `SELECT` runs before `WHERE`.
 | `ORDER BY` | ✅ | Runs after `SELECT`; aliases and positional numbers both work. |
 | `LIMIT` / `OFFSET` | ✅ | Runs last. |
 
+<div class="quiz" data-quiz-id="q-logical-order-1">
+  <div class="quiz-kind">Theory</div>
+  <div class="quiz-q">Which single clause is evaluated <em>last</em> in the logical-order model?</div>
+  <ol class="quiz-opts">
+    <li><code>SELECT</code></li>
+    <li><code>ORDER BY</code></li>
+    <li data-correct><code>LIMIT</code> / <code>OFFSET</code></li>
+    <li><code>HAVING</code></li>
+  </ol>
+  <div class="quiz-why"><strong>LIMIT / OFFSET</strong> is the very last step. That's why <code>ORDER BY</code> applies <em>before</em> the slice — and why a query without <code>ORDER BY + LIMIT</code> can return rows in any order even if the outer row set looks sorted.</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-logical-order-2">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You wrote <code>SELECT salary * 12 AS annual FROM Emp WHERE annual &gt; 100000;</code> and got an "unknown column: annual" error. Why?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE</code> doesn't accept arithmetic expressions</li>
+    <li data-correct><code>WHERE</code> runs before <code>SELECT</code>, so the <code>annual</code> alias doesn't exist yet</li>
+    <li>You must quote alias names in <code>WHERE</code> as <code>"annual"</code></li>
+    <li>The alias collides with a reserved keyword</li>
+  </ol>
+  <div class="quiz-why">Because <code>SELECT</code> runs <em>after</em> <code>WHERE</code>, <code>WHERE</code> only sees the raw table columns. Fix: repeat the expression (<code>WHERE salary*12 &gt; 100000</code>) or wrap in a CTE/subquery that materializes the alias first. <code>ORDER BY</code> works with aliases because it runs <em>after</em> <code>SELECT</code>.</div>
+</div>
+
 ---
 
 ## 0.2 NULL Semantics & Three-Valued Logic
@@ -2081,8 +2454,6 @@ WHERE NOT EXISTS (
 
 💡 **Rule of thumb:** `NOT EXISTS` is the default choice for "rows without a match." Reach for `NOT IN` only when you've personally verified the subquery can never produce a `NULL`.
 
-🔗 **Feel the bug yourself:** [▶ Products Never Purchased (NULL-Trap Edition)](sql_sandbox.html?slug=products-never-purchased) — one `NULL` gift-card order in the subquery silently nukes your whole result. Write the naïve `NOT IN` first, watch it fail, then fix it with `NOT EXISTS`.
-
 💡 **Why does `UNION` treat `NULL = NULL` as equal for deduplication, when `=` does not?** Different operations have different notions of equality: `=` is *truth-valued* (three-valued logic), but `UNION`, `GROUP BY`, `DISTINCT`, and `PARTITION BY` use *structural* equality — "do these tuples look identical?" — and NULL looks identical to NULL. The SQL standard picked structural equality for grouping because the alternative (never grouping NULLs together) would produce one row per NULL, which is almost never useful.
 
 ### NULL-Handling Functions
@@ -2140,6 +2511,51 @@ ORDER BY col DESC NULLS FIRST
 ORDER BY col IS NULL, col ASC   -- pushes NULLs to end
 ```
 
+<div class="quiz" data-quiz-id="q-null-count">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">Given the <code>Users</code> table, what does the query return?</div>
+  <div class="quiz-data-label">Users</div>
+<pre><code>id | email
+---+----------
+ 1 | a@x.io
+ 2 | NULL
+ 3 | c@x.io
+ 4 | NULL</code></pre>
+<pre><code class="language-sql">SELECT COUNT(*), COUNT(email), COUNT(DISTINCT email)
+FROM Users;</code></pre>
+  <ol class="quiz-opts">
+    <li><code>4, 4, 4</code></li>
+    <li data-correct><code>4, 2, 2</code></li>
+    <li><code>4, 2, 3</code></li>
+    <li><code>NULL, NULL, NULL</code></li>
+  </ol>
+  <div class="quiz-why"><strong>COUNT(*)</strong> counts every row including NULLs → 4. <strong>COUNT(col)</strong> skips NULLs → 2. <strong>COUNT(DISTINCT col)</strong> skips NULLs <em>and</em> dedupes → 2 (a@x.io, c@x.io).</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-null-not-in">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You run <code>SELECT name FROM Cust WHERE id NOT IN (SELECT cust_id FROM Orders);</code> and get <em>zero</em> rows, even though many customers clearly have no orders. Why?</div>
+  <ol class="quiz-opts">
+    <li><code>NOT IN</code> requires a <code>JOIN</code>, not a subquery</li>
+    <li data-correct>One of the <code>Orders.cust_id</code> values is NULL — so every comparison returns UNKNOWN, filtering every row out</li>
+    <li>The inner subquery needs <code>DISTINCT</code></li>
+    <li><code>NOT IN</code> is deprecated in modern SQL</li>
+  </ol>
+  <div class="quiz-why">Classic NULL trap. <code>x NOT IN (a, b, NULL)</code> is <code>x ≠ a AND x ≠ b AND x ≠ NULL</code>; the last comparison is UNKNOWN, which short-circuits the whole <code>AND</code> to UNKNOWN, so no row passes. Use <code>NOT EXISTS</code> (NULL-safe) or a <code>LEFT JOIN … WHERE o.id IS NULL</code> anti-join instead.</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-null-eq">
+  <div class="quiz-kind">Theory</div>
+  <div class="quiz-q"><code>SELECT NULL = NULL;</code> returns:</div>
+  <ol class="quiz-opts">
+    <li><code>TRUE</code></li>
+    <li><code>FALSE</code></li>
+    <li data-correct><code>NULL</code> (UNKNOWN)</li>
+    <li>Syntax error</li>
+  </ol>
+  <div class="quiz-why">Any comparison involving NULL yields UNKNOWN, which most engines surface as NULL. To test null-equality use <code>IS NULL</code> or <code>IS NOT DISTINCT FROM</code> (PostgreSQL) / <code>&lt;=&gt;</code> (MySQL).</div>
+</div>
+
 ---
 
 ## 0.3 Type Casting & Implicit Conversions
@@ -2187,6 +2603,18 @@ SELECT CAST(7 AS DECIMAL) / 2  -- All: 3.5
 
 💡 **Rule of thumb:** the moment you see a `/` in a query that needs to return a fraction (percentages, ratios, averages), **cast one side to `DECIMAL` or multiply by `1.0`**. Don't assume the engine will do the right thing — PostgreSQL and SQL Server silently truncate. The interviewer-favorite bug is `a / b` returning `0` because both are integers and `a < b`.
 
+<div class="quiz" data-quiz-id="q-integer-division">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">On PostgreSQL, what does <code>SELECT 3 / 4</code> return?</div>
+  <ol class="quiz-opts">
+    <li><code>0.75</code></li>
+    <li data-correct><code>0</code></li>
+    <li><code>0.7500</code></li>
+    <li>Error</li>
+  </ol>
+  <div class="quiz-why">Both operands are integers, so Postgres/SQL Server truncate to integer division. Use <code>3 * 1.0 / 4</code> or <code>CAST(3 AS DECIMAL) / 4</code>.</div>
+</div>
+
 ---
 
 ## 0.4 CASE Expressions
@@ -2210,6 +2638,24 @@ END
 ⚙️ CASE is an **expression**, not a statement — it returns a value and can appear in SELECT, WHERE, ORDER BY, GROUP BY, and inside aggregate functions.
 
 ⚠️ `CASE col WHEN NULL` **never matches** — use `CASE WHEN col IS NULL` instead.
+
+<div class="quiz" data-quiz-id="q-case-null-match">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">What does this return?</div>
+<pre><code class="language-sql">SELECT CASE x
+         WHEN NULL THEN 'null!'
+         WHEN 1    THEN 'one'
+         ELSE 'other'
+       END
+FROM (VALUES (NULL), (1), (2)) AS t(x);</code></pre>
+  <ol class="quiz-opts">
+    <li><code>'null!', 'one', 'other'</code></li>
+    <li data-correct><code>'other', 'one', 'other'</code></li>
+    <li><code>NULL, 'one', 'other'</code></li>
+    <li>Error — can't compare to NULL</li>
+  </ol>
+  <div class="quiz-why">The <strong>simple</strong> <code>CASE x WHEN NULL</code> form expands to <code>x = NULL</code>, which is always UNKNOWN, so it never matches — even when <code>x</code> is actually NULL. The NULL row falls through to <code>ELSE 'other'</code>. Use the <strong>searched</strong> form: <code>CASE WHEN x IS NULL THEN …</code>.</div>
+</div>
 
 ---
 
@@ -2246,6 +2692,18 @@ SELECT DISTINCT department FROM employees ORDER BY department;  -- OK
 SELECT DISTINCT department FROM employees ORDER BY salary;      -- ERROR in PostgreSQL
 ```
 
+<div class="quiz" data-quiz-id="q-between-timestamp">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Your <code>created_at</code> column is <code>TIMESTAMP</code>. You write <code>WHERE created_at BETWEEN '2024-01-01' AND '2024-01-31'</code>. Users report January 31st orders are missing. Why?</div>
+  <ol class="quiz-opts">
+    <li>BETWEEN is exclusive on the upper bound</li>
+    <li data-correct><code>'2024-01-31'</code> is cast to <code>2024-01-31 00:00:00</code>, so any timestamp later that day is excluded</li>
+    <li>BETWEEN doesn't work on timestamps</li>
+    <li>The dates need single quotes escaped</li>
+  </ol>
+  <div class="quiz-why">The string date is implicitly cast to midnight. Fix with a half-open range: <code>created_at &gt;= '2024-01-01' AND created_at &lt; '2024-02-01'</code>.</div>
+</div>
+
 ---
 
 ## 0.6 Operator Precedence & Parentheses
@@ -2263,6 +2721,18 @@ WHERE (status = 'active' OR plan = 'premium') AND signup_date > '2024-01-01'
 **Precedence (tightest → loosest):** `()` → unary `-`, `NOT` → `*`, `/`, `%` → `+`, `-` → comparison (`=`, `<`, `>`, `LIKE`, `IN`, `BETWEEN`) → `AND` → `OR`.
 
 💡 **Rule of thumb:** whenever you mix `AND` and `OR`, parenthesize explicitly — even when the default grouping is what you want. It makes intent obvious in code review.
+
+<div class="quiz" data-quiz-id="q-precedence-and-or">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Intent: rows that are either high-priority OR (paid AND recent). Which WHERE clause matches the intent?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE priority = 'high' OR paid = 1 AND created_at &gt; '2024-01-01'</code></li>
+    <li data-correct>Both A and C give the same result</li>
+    <li><code>WHERE priority = 'high' OR (paid = 1 AND created_at &gt; '2024-01-01')</code></li>
+    <li><code>WHERE (priority = 'high' OR paid = 1) AND created_at &gt; '2024-01-01'</code></li>
+  </ol>
+  <div class="quiz-why"><code>AND</code> binds tighter than <code>OR</code>, so A parses exactly as C. D is the wrong grouping — it also requires <code>created_at</code> for the high-priority rows. Always parenthesize to remove ambiguity.</div>
+</div>
 
 ---
 ---
@@ -2327,6 +2797,18 @@ WHERE ABS(float_col - 0.3) < 0.0001  -- ✅ epsilon comparison
 - `TIMESTAMP`: stored as UTC, converted to session timezone on retrieval. Range: 1970–2038.
 - `DATETIME`: stored as-is, no timezone conversion. Range: 1000–9999.
 
+<div class="quiz" data-quiz-id="q-float-money">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You're designing a <code>payments</code> table. Which type should <code>amount</code> be?</div>
+  <ol class="quiz-opts">
+    <li><code>FLOAT</code> — it's fast and compact</li>
+    <li><code>DOUBLE</code> — more precision than FLOAT</li>
+    <li data-correct><code>DECIMAL(12, 2)</code> — exact fixed-point</li>
+    <li><code>VARCHAR</code> — avoids rounding</li>
+  </ol>
+  <div class="quiz-why">FLOAT/DOUBLE are binary approximations: <code>0.1 + 0.2 = 0.30000000000000004</code>. Any sum of money in FLOAT eventually misreconciles. Always use <code>DECIMAL(p, s)</code> for currency.</div>
+</div>
+
 ---
 
 ## 1.2 Constraints & Referential Integrity
@@ -2372,6 +2854,18 @@ CREATE TABLE orders (
 
 🧠 **Interview relevance:** Understanding constraints explains why certain JOINs always match (FK guarantees existence) and why anti-joins find orphaned rows.
 
+<div class="quiz" data-quiz-id="q-fk-cascade">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q"><code>orders.customer_id</code> has <code>FOREIGN KEY … ON DELETE CASCADE</code>. Customer 7 has 3 orders. You run <code>DELETE FROM customers WHERE id = 7;</code>. What happens?</div>
+  <ol class="quiz-opts">
+    <li>Error — customer has dependent orders</li>
+    <li>Customer 7 deleted; orders orphaned (customer_id stays 7)</li>
+    <li data-correct>Customer 7 and all 3 orders are deleted</li>
+    <li>Customer 7 deleted; orders get <code>customer_id = NULL</code></li>
+  </ol>
+  <div class="quiz-why"><code>ON DELETE CASCADE</code> propagates the delete to child rows. <code>SET NULL</code> would nullify the FK; <code>RESTRICT</code> would block the delete.</div>
+</div>
+
 ---
 
 ## 1.3 Normalization (Quick Reference)
@@ -2403,6 +2897,18 @@ CREATE TABLE orders (
 
 💡 **Default:** surrogate PK + a `UNIQUE` constraint on the business-natural key. Interviewers often probe on "what if the email changes?" — the surrogate answer is the clean one.
 
+<div class="quiz" data-quiz-id="q-denormalize-reporting">
+<div class="quiz-kind">⚡ Scenario · how to make this faster</div>
+<div class="quiz-q">A daily dashboard joins 7 fully-normalized tables and times out at 40s. Writes happen ~50×/day; the dashboard is queried ~5,000×/day. Which change gives the biggest realistic speed-up?</div>
+<ol class="quiz-opts">
+<li>Add indexes on every FK column in all 7 tables.</li>
+<li data-correct>Build a denormalized reporting table (or materialized view) that pre-joins the 7 tables, refreshed on write.</li>
+<li>Rewrite the 7-way JOIN as correlated subqueries.</li>
+<li>Raise the database's <code>max_connections</code> so the dashboard has more parallelism.</li>
+</ol>
+<div class="quiz-why">Read-heavy + low-write is the textbook case for controlled denormalization. The join cost is paid <em>once per write</em> (50×) instead of <em>once per read</em> (5,000×). Indexes help but can't eliminate a 7-way join. Correlated subqueries are usually <em>slower</em>, not faster. More connections doesn't make a single query faster.</div>
+</div>
+
 ---
 
 ## 1.4 Engine Differences — MySQL vs PostgreSQL vs SQL Server
@@ -2421,6 +2927,18 @@ CREATE TABLE orders (
 | String agg | `GROUP_CONCAT` | `STRING_AGG` | `STRING_AGG` (2017+) |
 | `IF` in query | `IF(cond, a, b)` | ❌ (use `CASE`) | `IIF(cond, a, b)` |
 | `QUALIFY` (filter on window result) | ❌ | ❌ | ❌ *(available on Snowflake, BigQuery, Databricks, Teradata, H2)* |
+
+<div class="quiz" data-quiz-id="q-engine-nulls-orderby">
+<div class="quiz-kind">🎯 Guess the output</div>
+<div class="quiz-q">You run <code>SELECT x FROM t ORDER BY x ASC;</code> where <code>x</code> contains values <code>1, NULL, 2</code>. Same query, same data, different engines. Which output pair is correct?</div>
+<ol class="quiz-opts">
+<li>PostgreSQL: <code>NULL, 1, 2</code> · MySQL: <code>1, 2, NULL</code></li>
+<li data-correct>PostgreSQL: <code>1, 2, NULL</code> · MySQL: <code>NULL, 1, 2</code></li>
+<li>Both return <code>1, 2, NULL</code>.</li>
+<li>Both return <code>NULL, 1, 2</code>.</li>
+</ol>
+<div class="quiz-why">PostgreSQL sorts <code>NULL</code> <strong>last</strong> in ASC by default; MySQL and SQL Server sort <code>NULL</code> <strong>first</strong>. Use <code>NULLS FIRST</code> / <code>NULLS LAST</code> (Postgres) or a <code>CASE WHEN x IS NULL THEN 1 ELSE 0 END</code> sort key (MySQL) to make it explicit.</div>
+</div>
 
 ---
 ---
@@ -2560,6 +3078,38 @@ HAVING COUNT(*) > 1;
 
 **Why GROUP BY + HAVING?** GROUP BY collapses all rows with the same email; HAVING filters to only groups with more than one row.
 
+<div class="quiz" data-quiz-id="q-having-vs-where">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You want <em>departments with more than 5 employees earning above $100k</em>. Which placement is correct?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE COUNT(*) &gt; 5 AND salary &gt; 100000</code></li>
+    <li data-correct><code>WHERE salary &gt; 100000 … GROUP BY dept HAVING COUNT(*) &gt; 5</code></li>
+    <li><code>HAVING salary &gt; 100000 AND COUNT(*) &gt; 5</code></li>
+    <li><code>WHERE COUNT(salary &gt; 100000) &gt; 5</code></li>
+  </ol>
+  <div class="quiz-why"><strong>WHERE</strong> filters rows <em>before</em> grouping — use it for per-row predicates like <code>salary &gt; 100000</code>. <strong>HAVING</strong> filters groups <em>after</em> aggregation — use it for aggregate predicates like <code>COUNT(*) &gt; 5</code>. Mixing them in the wrong clause either errors or changes semantics.</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-group-by-count-null">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">How many groups does this produce?</div>
+<pre><code>dept | emp
+-----+----
+A    | 1
+A    | 2
+NULL | 3
+NULL | 4
+B    | 5</code></pre>
+<pre><code class="language-sql">SELECT dept, COUNT(*) FROM T GROUP BY dept;</code></pre>
+  <ol class="quiz-opts">
+    <li>2 (A, B) — NULLs excluded</li>
+    <li data-correct>3 (A, B, NULL) — NULLs form their own group</li>
+    <li>4 — each NULL is its own group</li>
+    <li>5 — no grouping possible with NULLs</li>
+  </ol>
+  <div class="quiz-why"><code>GROUP BY</code> treats all NULLs as one group (equal for grouping purposes, even though <code>NULL = NULL</code> is UNKNOWN in WHERE). That's why <code>COUNT(*) GROUP BY nullable_col</code> always returns a NULL-bucket row.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -2675,6 +3225,18 @@ ORDER BY id;
 ```
 
 **Intuition:** Odd IDs get +1 (swap with next), even IDs get -1 (swap with previous). The last odd ID (no partner) stays put.
+
+<div class="quiz" data-quiz-id="q-cte-vs-subquery">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">A CTE <code>WITH ranked AS (...)</code> is referenced three times in the main query. In PostgreSQL 12+, what happens by default?</div>
+  <ol class="quiz-opts">
+    <li>The CTE is always materialized once and reused</li>
+    <li data-correct>The CTE is inlined into each reference (may re-compute)</li>
+    <li>PostgreSQL errors — a CTE can only be referenced once</li>
+    <li>The CTE is cached in a temp file</li>
+  </ol>
+  <div class="quiz-why">Postgres 12+ inlines CTEs by default, matching subquery behavior. If the CTE is expensive and reused, force caching with <code>WITH ranked AS MATERIALIZED (...)</code>.</div>
+</div>
 
 ### 🔗 Practice Problems
 
@@ -2806,6 +3368,18 @@ GROUP BY t.request_date;
 
 **Why ON for banned?** We filter banned users during the join so only trips with unbanned clients AND drivers remain.
 
+<div class="quiz" data-quiz-id="q-on-vs-where-outer">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You run <code>SELECT * FROM customers c LEFT JOIN orders o ON c.id = o.customer_id WHERE o.status = 'paid'</code>. You expected all customers (with NULLs for non-buyers). Why does the result only show customers with paid orders?</div>
+  <ol class="quiz-opts">
+    <li><code>LEFT JOIN</code> ignores NULLs</li>
+    <li data-correct>The <code>WHERE</code> runs after the join and filters out the NULL-padded rows, silently converting it to an INNER JOIN</li>
+    <li><code>WHERE o.status = 'paid'</code> is illegal after LEFT JOIN</li>
+    <li>You need <code>SELECT DISTINCT</code></li>
+  </ol>
+  <div class="quiz-why">Conditions on the outer-joined table belong in the <code>ON</code> clause: <code>LEFT JOIN orders o ON c.id = o.customer_id AND o.status = 'paid'</code>. WHERE filters the post-join row set — and the NULL-padded rows fail <code>NULL = 'paid'</code>.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -2860,6 +3434,18 @@ WHERE a.key NOT IN (SELECT key FROM table_b WHERE key IS NOT NULL);
 ```
 
 ⚠️ **NULL trap:** If the subquery returns **any NULL**, `NOT IN` returns no rows at all (because `value NOT IN (..., NULL, ...)` is UNKNOWN). Always add `WHERE key IS NOT NULL` or use `NOT EXISTS`.
+
+<div class="quiz" data-quiz-id="q-anti-join-pick">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You need every customer who has <em>never</em> placed an order. The <code>Orders.cust_id</code> column is nullable (cancelled orders retain a NULL cust_id). Which query is correct <em>and</em> performant on a large table?</div>
+  <ol class="quiz-opts">
+    <li><code>SELECT c.* FROM Customers c WHERE c.id NOT IN (SELECT cust_id FROM Orders);</code></li>
+    <li data-correct><code>SELECT c.* FROM Customers c LEFT JOIN Orders o ON o.cust_id = c.id WHERE o.cust_id IS NULL;</code></li>
+    <li><code>SELECT c.* FROM Customers c INNER JOIN Orders o ON o.cust_id = c.id WHERE o.cust_id IS NULL;</code></li>
+    <li><code>SELECT c.* FROM Customers c WHERE (SELECT COUNT(*) FROM Orders o WHERE o.cust_id = c.id) IS NULL;</code></li>
+  </ol>
+  <div class="quiz-why">The <code>LEFT JOIN + IS NULL</code> anti-join is NULL-safe and lets the optimizer use an index on <code>Orders.cust_id</code>. <code>NOT IN</code> with a nullable subquery silently returns zero rows. <code>INNER JOIN</code> is logically impossible (you can't both match and not match). The correlated <code>COUNT</code> runs a subquery per row → O(n·m).</div>
+</div>
 
 #### Method 4 — GROUP BY + HAVING COUNT(match) = 0
 
@@ -2959,6 +3545,18 @@ JOIN orders o ON c.id = o.customer_id;
 | `EXISTS` | No | ✅ | Best (short-circuits) |
 | `IN` | No | ⚠️ NULLs in subquery can cause issues | Good |
 | `JOIN + DISTINCT` | Removed by DISTINCT | ✅ | Worst (joins then deduplicates) |
+
+<div class="quiz" data-quiz-id="q-semi-join-duplicates">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">Customer 7 has 3 orders. How many rows does <code>SELECT c.* FROM customers c WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)</code> return for customer 7?</div>
+  <ol class="quiz-opts">
+    <li>0</li>
+    <li data-correct>1</li>
+    <li>3</li>
+    <li>4</li>
+  </ol>
+  <div class="quiz-why">A semi-join returns each outer row at most once — it asks "does <em>any</em> matching row exist?" and stops. A plain <code>INNER JOIN</code> would return customer 7 three times (once per order); that's why semi-joins avoid the <code>SELECT DISTINCT</code> workaround.</div>
+</div>
 
 ### 🔗 Practice Problems
 
@@ -3077,6 +3675,18 @@ LEFT JOIN item_tot i ON i.order_id = o.id
 LEFT JOIN pay_tot  p ON p.order_id = o.id;
 ```
 
+<div class="quiz" data-quiz-id="q-cross-join-explosion">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">Order #1 has 3 order_items and 2 payments. You run <code>SELECT o.id, SUM(p.amount) FROM orders o JOIN order_items i ON i.order_id = o.id JOIN payments p ON p.order_id = o.id WHERE o.id = 1 GROUP BY o.id</code>. If the true payment total for order #1 is $100, what does <code>SUM(p.amount)</code> return?</div>
+  <ol class="quiz-opts">
+    <li>$100 — correct total</li>
+    <li>$200 — doubled by payments</li>
+    <li data-correct>$300 — each payment counted once per order_item (3 × $100)</li>
+    <li>$600 — 3 × 2 × $100</li>
+  </ol>
+  <div class="quiz-why">Joining orders → items → payments produces <strong>3 × 2 = 6 rows</strong> per order. Each of the 2 payment rows is duplicated 3 times (once per item), so <code>SUM</code> triples the payment total. Fix: pre-aggregate each child in a CTE before joining.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -3100,6 +3710,18 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
 
 💡 **Performance:** `UNION` runs a sort/hash-dedup step over the combined result; `UNION ALL` just concatenates. Prefer `UNION ALL` whenever duplicates are impossible (e.g., disjoint date ranges, mutually-exclusive filters).
 
+<div class="quiz" data-quiz-id="q-union-vs-union-all">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q"><code>A</code> has values <code>(1, 2, 2)</code>. <code>B</code> has values <code>(2, 3)</code>. Row counts for <code>A UNION B</code> and <code>A UNION ALL B</code>?</div>
+  <ol class="quiz-opts">
+    <li>5 and 5</li>
+    <li data-correct>3 and 5</li>
+    <li>3 and 4</li>
+    <li>2 and 5</li>
+  </ol>
+  <div class="quiz-why"><code>UNION</code> deduplicates the combined result → <code>{1, 2, 3}</code> = 3 rows. <code>UNION ALL</code> just concatenates → <code>1, 2, 2, 2, 3</code> = 5 rows. When duplicates can't occur, prefer <code>UNION ALL</code> to skip the dedup cost.</div>
+</div>
+
 ---
 
 ## 2.8 EXISTS vs IN
@@ -3115,6 +3737,18 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
 🧠 **Guideline:**
 - Checking **membership in a fixed set**: `IN`
 - Checking **existence with complex conditions**: `EXISTS`
+
+<div class="quiz" data-quiz-id="q-exists-vs-in-null">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Your subquery <code>SELECT parent_id FROM Kids</code> may legitimately contain NULLs (adopted children with unknown parent). You want parents who <em>do</em> have at least one kid. Safest choice?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE id IN (SELECT parent_id FROM Kids)</code></li>
+    <li data-correct><code>WHERE EXISTS (SELECT 1 FROM Kids k WHERE k.parent_id = Parent.id)</code></li>
+    <li><code>WHERE id = ANY(SELECT parent_id FROM Kids)</code></li>
+    <li><code>WHERE id = (SELECT parent_id FROM Kids)</code></li>
+  </ol>
+  <div class="quiz-why"><strong>EXISTS</strong> is NULL-safe — it asks "does any matching row exist," and a NULL <code>parent_id</code> simply fails the <code>=</code> test like any other mismatch. Plain <code>IN</code> is equivalent here for the positive case, but using <code>EXISTS</code> gives you a consistent mental model that also handles the <code>NOT EXISTS</code> case correctly (where <code>NOT IN</code> breaks with NULLs — see Phase 0.2 quiz).</div>
+</div>
 
 ---
 
@@ -3154,6 +3788,18 @@ LEFT JOIN sales s ON d.dt::date = s.sale_date;
 💡 `generate_series` replaces recursive CTEs for sequence generation in PostgreSQL — simpler and faster.
 
 ⚠️ **MySQL has no `generate_series`.** For the portable fallback (recursive CTE that emits a number/date series) see §4.3 Sub-Pattern A.
+
+<div class="quiz" data-quiz-id="q-generate-series-gaps">
+<div class="quiz-kind">🎯 Guess the output</div>
+<div class="quiz-q">Table <code>sales(day, amt)</code> has exactly two rows: <code>('2024-01-01', 10)</code> and <code>('2024-01-03', 30)</code>. You run:<br><code>SELECT d.dt::date, COALESCE(s.amt, 0) FROM generate_series('2024-01-01'::date, '2024-01-03'::date, '1 day') AS d(dt) LEFT JOIN sales s ON d.dt::date = s.day ORDER BY 1;</code><br>How many rows are returned and what is the sum of column 2?</div>
+<ol class="quiz-opts">
+<li>2 rows, sum = 40</li>
+<li data-correct>3 rows, sum = 40</li>
+<li>3 rows, sum = 60</li>
+<li>2 rows, sum = 60</li>
+</ol>
+<div class="quiz-why"><code>generate_series</code> emits one row per day (Jan-01, Jan-02, Jan-03) — that's <strong>3 rows</strong>. The <code>LEFT JOIN</code> matches Jan-01→10 and Jan-03→30; the missing Jan-02 becomes <code>COALESCE(NULL, 0)</code> = 0. Sum = 10 + 0 + 30 = 40. This is exactly why series generation beats recursive CTEs for gap-filling.</div>
+</div>
 
 ---
 ---
@@ -3230,6 +3876,35 @@ SELECT * FROM ranked WHERE rnk <= K;
 ```
 
 ⚠️ Cannot put `WHERE rnk <= K` inside the same SELECT that defines `rnk` — window functions run in `SELECT`, but `WHERE` runs before `SELECT`.
+
+<div class="quiz" data-quiz-id="q-rank-vs-dense">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">Salaries sorted DESC are <code>100, 100, 90, 80, 80, 70</code>. What does each function produce?</div>
+<pre><code class="language-sql">SELECT salary,
+       ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn,
+       RANK()       OVER (ORDER BY salary DESC) AS rk,
+       DENSE_RANK() OVER (ORDER BY salary DESC) AS dr
+FROM T;</code></pre>
+  <ol class="quiz-opts">
+    <li><code>rn=1..6, rk=1,1,3,4,4,6, dr=1,1,2,3,3,4</code> ✓</li>
+    <li><code>rn=1..6, rk=1,1,2,3,3,4, dr=1,1,3,4,4,6</code> (rk/dr swapped)</li>
+    <li><code>rn=1,1,2,3,3,4, rk=1..6, dr=1,1,3,4,4,6</code></li>
+    <li><code>rn=1..6, rk=1..6, dr=1..6</code> (all the same)</li>
+  </ol>
+  <div class="quiz-why">First option is correct (marked with ✓). <strong>ROW_NUMBER</strong> always gives unique 1..N. <strong>RANK</strong> gives tied rows the same rank but leaves gaps (1,1 → next is 3, not 2). <strong>DENSE_RANK</strong> shares ranks but never gaps. For "top 3 salaries allowing ties," use <code>DENSE_RANK() ≤ 3</code>.</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-window-where">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Why does <code>SELECT ..., RANK() OVER (ORDER BY salary DESC) AS r FROM T WHERE r ≤ 3;</code> fail?</div>
+  <ol class="quiz-opts">
+    <li><code>RANK()</code> isn't a valid SQL function</li>
+    <li data-correct>Window functions evaluate in the <code>SELECT</code> step, which runs <em>after</em> <code>WHERE</code> — so <code>r</code> doesn't exist yet when <code>WHERE</code> runs</li>
+    <li><code>WHERE</code> doesn't accept numeric comparisons</li>
+    <li>You must use <code>ORDER BY r</code> instead of <code>WHERE</code></li>
+  </ol>
+  <div class="quiz-why">Window functions compute during <code>SELECT</code>. You must wrap the windowed query in a CTE or subquery, then filter in the outer level: <code>WITH ranked AS (SELECT …, RANK() …) SELECT * FROM ranked WHERE r ≤ 3;</code> Some databases support <code>QUALIFY</code> (BigQuery, Snowflake, Teradata) as a one-line shortcut.</div>
+</div>
 
 ### Sub-Pattern B — Deduplication
 
@@ -3455,6 +4130,18 @@ WHERE temperature > prev_temp
 
 **Why check DATEDIFF?** There might be missing dates; LAG gives the previous *row*, not the previous *day*.
 
+<div class="quiz" data-quiz-id="q-lag-first-row">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">For the first row in each partition, <code>LAG(col) OVER (PARTITION BY … ORDER BY …)</code> returns what?</div>
+  <ol class="quiz-opts">
+    <li>The value from the previous partition's last row</li>
+    <li data-correct><code>NULL</code></li>
+    <li>The same row's value (no-op)</li>
+    <li>Error</li>
+  </ol>
+  <div class="quiz-why"><code>LAG</code> returns NULL when there's no previous row in the partition. Use <code>LAG(col, 1, default)</code> to supply a default value, or wrap in <code>COALESCE</code> to avoid NULL-propagation bugs in downstream logic like <code>col - LAG(col)</code>.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -3608,6 +4295,18 @@ FROM dates d;
 💡 Plain `COUNT(*) OVER (ORDER BY d RANGE BETWEEN '6 day' PRECEDING AND CURRENT ROW)` works
 for totals, but **distinct** counts need the correlated subquery (or a self-join on the spine).
 
+<div class="quiz" data-quiz-id="q-default-window-frame">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You write <code>SUM(amount) OVER (ORDER BY date)</code> expecting a running total. Three rows share the same <code>date</code> value. What does each of those tied rows receive?</div>
+  <ol class="quiz-opts">
+    <li>Only its own <code>amount</code> (ORDER BY acts like PARTITION BY)</li>
+    <li>The running sum up to just before that row</li>
+    <li data-correct>The same value — the sum through the end of the tie group (RANGE default)</li>
+    <li>NULL, because ties are ambiguous</li>
+  </ol>
+  <div class="quiz-why">With <code>ORDER BY</code> and no frame clause, the default is <code>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>, where "current row" means "all peers with the same ORDER BY value." Tied rows get identical totals. Use <code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> for a strict row-by-row running sum.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -3721,6 +4420,18 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) = 1;
 
 💡 Worth knowing even if your day-to-day dialect lacks it — most modern cloud warehouses support it, and it collapses the classic "dedup-via-ROW_NUMBER=1" idiom to a single statement.
 
+<div class="quiz" data-quiz-id="q-ntile-distribution">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">You have 10 rows, sorted by <code>salary</code>. What does <code>NTILE(4) OVER (ORDER BY salary)</code> assign as bucket sizes?</div>
+  <ol class="quiz-opts">
+    <li>4, 4, 1, 1 — first two buckets full, rest leftover</li>
+    <li>2, 3, 2, 3 — alternating</li>
+    <li data-correct>3, 3, 2, 2 — larger buckets come first</li>
+    <li>Error — 10 is not divisible by 4</li>
+  </ol>
+  <div class="quiz-why"><code>NTILE(n)</code> splits rows into <code>n</code> buckets as evenly as possible. When rows don't divide evenly, the earlier buckets get one extra row. Useful for percentile/quartile bucketing when you don't need interpolation (vs <code>PERCENTILE_CONT</code>).</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -3743,7 +4454,6 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) = 1;
 | A specific set of groupings you hand-pick (not a fixed hierarchy) | `GROUPING SETS (…)` |
 
 In other words: `ROLLUP` is `CUBE` restricted to a prefix hierarchy; `GROUPING SETS` is the escape hatch for everything else.
-
 
 ```sql
 -- ROLLUP: hierarchical subtotals (rightmost to leftmost)
@@ -3786,6 +4496,18 @@ GROUP BY ROLLUP(region, product);
 ORDER BY GROUPING_ID(region, product), region, product
 -- 0 = detail, 1 = product-subtotal, 2 = region-subtotal, 3 = grand total
 ```
+
+<div class="quiz" data-quiz-id="q-rollup-vs-cube">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You need sales totals: by (region, product), by region subtotal, and the grand total — but NOT by product alone. Which operator fits best?</div>
+  <ol class="quiz-opts">
+    <li><code>GROUP BY CUBE(region, product)</code></li>
+    <li data-correct><code>GROUP BY ROLLUP(region, product)</code></li>
+    <li><code>GROUP BY GROUPING SETS ((region, product), (product), ())</code></li>
+    <li>Plain <code>GROUP BY region, product</code></li>
+  </ol>
+  <div class="quiz-why"><code>ROLLUP</code> produces the hierarchical prefix subtotals: <code>(region, product)</code>, <code>(region)</code>, <code>()</code>. <code>CUBE</code> would also add the <code>(product)</code> grouping you don't want. Use <code>GROUPING SETS</code> when the combinations aren't a clean prefix hierarchy.</div>
+</div>
 
 ---
 ---
@@ -3831,6 +4553,18 @@ Rows with the **same difference** belong to the **same island**. GROUP BY this d
 - From `6 → 8`, value jumps by 2 → `value − rn` becomes `2` → another new island.
 
 So `GROUP BY (value − rn)` collapses each run of consecutive values into one group. This single trick is the core of at least a dozen Hard-tier interview problems.
+
+<div class="quiz" data-quiz-id="q-islands-diff">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">Given values <code>[10, 11, 12, 15, 16, 20]</code>, how many islands does <code>value − ROW_NUMBER()</code> produce, and what is the group key for each?</div>
+  <ol class="quiz-opts">
+    <li>1 island; group key = 9</li>
+    <li data-correct>3 islands; keys 9, 11, 14 (sizes 3, 2, 1)</li>
+    <li>6 islands; one per row</li>
+    <li>2 islands; keys 9, 14 (sizes 3, 3)</li>
+  </ol>
+  <div class="quiz-why"><code>value − rn</code> for <code>10..12</code> is <code>10−1=9, 11−2=9, 12−3=9</code> → island 1. For <code>15,16</code>: <code>15−4=11, 16−5=11</code> → island 2. For <code>20</code>: <code>20−6=14</code> → island 3. GROUP BY the diff collapses each consecutive run into one group regardless of its numeric value.</div>
+</div>
 
 ### Method 1 — Row Difference
 
@@ -4120,6 +4854,18 @@ FROM (
 same instant another starts does not overlap. Sort end events (`delta = -1`) **before** start
 events (`delta = +1`) at ties → tie-break `delta ASC`.
 
+<div class="quiz" data-quiz-id="q-interval-overlap">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Two intervals <code>[a_start, a_end)</code> and <code>[b_start, b_end)</code> overlap if and only if…</div>
+  <ol class="quiz-opts">
+    <li><code>a_start &lt; b_start AND a_end &gt; b_end</code></li>
+    <li><code>a_start BETWEEN b_start AND b_end</code></li>
+    <li data-correct><code>a_start &lt; b_end AND b_start &lt; a_end</code></li>
+    <li><code>a_start = b_start OR a_end = b_end</code></li>
+  </ol>
+  <div class="quiz-why">The classic overlap formula: each interval's start is before the other's end. With closed intervals <code>[a, b]</code> use <code>&lt;=</code>; with half-open <code>[a, b)</code> use strict <code>&lt;</code> so touching intervals don't count as overlap.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4283,6 +5029,18 @@ GROUP BY mgr;
 explosion, reply-thread depth — the recursion builds the transitive closure, the outer
 `GROUP BY` summarizes it.
 
+<div class="quiz" data-quiz-id="q-recursive-cte-structure">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">What's the role of <code>UNION ALL</code> (vs <code>UNION</code>) in a recursive CTE?</div>
+  <ol class="quiz-opts">
+    <li>Stylistic — both behave identically in recursive CTEs</li>
+    <li data-correct>Required — <code>UNION ALL</code> lets the engine stream new rows back into the next iteration; <code>UNION</code> would force dedup mid-recursion (unsupported by most engines)</li>
+    <li><code>UNION</code> is required; <code>UNION ALL</code> causes infinite loops</li>
+    <li>It's optional — you can omit it entirely</li>
+  </ol>
+  <div class="quiz-why">PostgreSQL and MySQL require <code>UNION ALL</code> in recursive CTEs; SQL Server allows both but <code>UNION</code> is rare. The anchor and recursive members must produce compatible row types, and dedup, if needed, is done in an outer query.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4438,6 +5196,18 @@ FROM Department
 GROUP BY id;
 ```
 
+<div class="quiz" data-quiz-id="q-pivot-aggregate">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Why must the <code>CASE</code> expression in a pivot be wrapped in an aggregate like <code>MAX</code> or <code>SUM</code>?</div>
+  <ol class="quiz-opts">
+    <li>Aggregates are faster than CASE alone</li>
+    <li data-correct>Without it, each input row produces its own output row; the aggregate collapses them into one row per <code>GROUP BY</code> key</li>
+    <li>CASE can't appear in a SELECT without aggregation</li>
+    <li>It's a syntax requirement of the PIVOT operator</li>
+  </ol>
+  <div class="quiz-why">The pivot is two operations fused: <code>GROUP BY id</code> collapses rows, and each <code>MAX/SUM(CASE ...)</code> picks the one matching value into its own column. Without the aggregate, you'd get sparse rows (one per input) with a single non-NULL column each.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4582,6 +5352,18 @@ FROM employees;
 
 💡 **When to rewrite:** If the correlated subquery is slow, convert to a GROUP BY subquery + JOIN, or use a window function.
 
+<div class="quiz" data-quiz-id="q-correlated-to-window">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You have <code>SELECT name, salary, (SELECT AVG(salary) FROM employees e2 WHERE e2.dept = e1.dept) FROM employees e1</code>. It's slow. Which rewrite is typically fastest on a modern engine?</div>
+  <ol class="quiz-opts">
+    <li>Wrap everything in a CTE</li>
+    <li data-correct><code>SELECT name, salary, AVG(salary) OVER (PARTITION BY dept) FROM employees</code></li>
+    <li>Add <code>DISTINCT</code> to the outer SELECT</li>
+    <li>Change to <code>SELECT SUM(salary)/COUNT(*) …</code> inline</li>
+  </ol>
+  <div class="quiz-why">A window function does one pass over the data; the correlated subquery is conceptually re-executed per outer row. Both are semantically equivalent here. A <code>JOIN</code> on a <code>GROUP BY</code> subquery works too, but windowing is the cleanest modern idiom.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4637,6 +5419,18 @@ ORDER BY s.ord;
 💡 **Drop-off ratios:** wrap either pattern in a CTE and divide each step's count by the
 previous step's count: `LAG(users_reached) OVER (ORDER BY ord)`.
 
+<div class="quiz" data-quiz-id="q-funnel-strict-loose">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Your funnel count at <code>checkout</code> is <em>higher</em> than the count at <code>add_to_cart</code>. What's the most likely reason?</div>
+  <ol class="quiz-opts">
+    <li>Bug in the aggregation</li>
+    <li data-correct>You're running a loose funnel — users can hit <code>checkout</code> without going through <code>add_to_cart</code> (deep links, returning checkouts, etc.)</li>
+    <li>Data is corrupted</li>
+    <li>Window function default frame issue</li>
+  </ol>
+  <div class="quiz-why">A loose funnel counts each step independently. Users who land straight on checkout (deep link, saved cart) inflate the later step count. Use a strict funnel (count users whose <em>max reached step</em> is ≥ k) when the question is "how many got this far in sequence."</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4681,18 +5475,29 @@ count toward the denominator. An INNER JOIN silently inflates every rate.
 off to a z-test / chi-squared in the BI layer. SQL gets you the rates; stats gets you the
 confidence.
 
-### 🔗 Practice Problems
+<div class="quiz" data-quiz-id="q-ab-test-join">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You compute variant conversion rates with <code>INNER JOIN Conversions c ON c.user_id = a.user_id</code>. Control shows 42% conversion, treatment 45%. What's wrong?</div>
+  <ol class="quiz-opts">
+    <li>Nothing — 45% &gt; 42% proves the treatment works</li>
+    <li data-correct>INNER JOIN drops non-converters; both rates are computed only over converters, so they're ~100% each with rounding — the numbers shown can't be the actual conversion rates</li>
+    <li>You need <code>ROUND()</code> in a different place</li>
+    <li>Variant assignment should be done post-join</li>
+  </ol>
+  <div class="quiz-why">Conversion rate = converters / <strong>assigned users</strong>. <code>INNER JOIN</code> filters out users who didn't convert, so the denominator collapses to just converters. Always <code>LEFT JOIN</code> from the assignments table to keep non-converters in the denominator.</div>
+</div>
 
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | A/B Test Lift | Medium | [▶ Practice](sql_sandbox.html?slug=ab-test-lift) |
-
----
 ---
 
 # PHASE 5 — Data Type Manipulation
 
 > *Date logic, string manipulation, and JSON queries show up everywhere. Learn the syntax once, apply it repeatedly.*
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | A/B Test Lift | Medium | [▶ Practice](sql_sandbox.html?slug=ab-test-lift) |
 
 ---
 
@@ -4847,6 +5652,18 @@ FROM Transactions
 GROUP BY DATE_FORMAT(trans_date, '%Y-%m'), country;
 ```
 
+<div class="quiz" data-quiz-id="q-date-sargable">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You need all rows from January 2024. <code>created_at</code> is a TIMESTAMP with an index. Best clause for index use?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE YEAR(created_at) = 2024 AND MONTH(created_at) = 1</code></li>
+    <li><code>WHERE DATE_FORMAT(created_at, '%Y-%m') = '2024-01'</code></li>
+    <li data-correct><code>WHERE created_at &gt;= '2024-01-01' AND created_at &lt; '2024-02-01'</code></li>
+    <li><code>WHERE CAST(created_at AS DATE) BETWEEN '2024-01-01' AND '2024-01-31'</code></li>
+  </ol>
+  <div class="quiz-why">Any function wrapping the indexed column (<code>YEAR()</code>, <code>DATE_FORMAT()</code>, <code>CAST()</code>) disables the index — the engine must evaluate the expression per row. A half-open range keeps the predicate sargable and matches all timestamps that day, not just midnight.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -4941,6 +5758,18 @@ GROUP BY sell_date
 ORDER BY sell_date;
 ```
 
+<div class="quiz" data-quiz-id="q-group-concat-engine">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You need a comma-separated list of tag names per post, alphabetically. Which function does each engine use?</div>
+  <ol class="quiz-opts">
+    <li>All three use <code>CONCAT_WS</code></li>
+    <li data-correct>MySQL: <code>GROUP_CONCAT</code>; PostgreSQL/SQL Server: <code>STRING_AGG</code></li>
+    <li>All three use <code>LISTAGG</code></li>
+    <li>PostgreSQL uses <code>GROUP_CONCAT</code>; MySQL uses <code>STRING_AGG</code></li>
+  </ol>
+  <div class="quiz-why">Engines split on naming: MySQL uses <code>GROUP_CONCAT(col ORDER BY col SEPARATOR ',')</code>; Postgres and SQL Server (2017+) use <code>STRING_AGG(col, ',' ORDER BY col)</code>; Oracle uses <code>LISTAGG</code>. Watch for <code>group_concat_max_len</code> in MySQL — it truncates silently past 1024 bytes by default.</div>
+</div>
+
 ### 🔗 Practice Problems
 
 | # | Problem | Difficulty | Practice |
@@ -5030,6 +5859,18 @@ WHERE mail LIKE '%@leetcode.com'
 
 ⚠️ **Engine quirk:** SQLite has no native REGEXP — the `GLOB` negated character class above is
 the portable escape hatch. MySQL/PostgreSQL can use `REGEXP` / `~` directly.
+
+<div class="quiz" data-quiz-id="q-substring-one-indexed">
+  <div class="quiz-kind">Guess the output</div>
+  <div class="quiz-q">What does <code>SUBSTRING('Database', 2, 4)</code> return in standard SQL?</div>
+  <ol class="quiz-opts">
+    <li><code>'ataba'</code> — 0-indexed, 4 characters</li>
+    <li data-correct><code>'atab'</code> — 1-indexed, 4 characters</li>
+    <li><code>'Datab'</code> — index 2 means 2nd character inclusive from the start</li>
+    <li><code>'atabase'</code> — runs to the end</li>
+  </ol>
+  <div class="quiz-why">SQL strings are <strong>1-indexed</strong> (unlike arrays in most programming languages). <code>SUBSTRING(str, start, length)</code>: position 2 is <code>'a'</code>, length 4 → <code>'atab'</code>. This off-by-one is a frequent interview gotcha.</div>
+</div>
 
 ### 🔗 Practice Problems
 
@@ -5137,6 +5978,18 @@ ALTER TABLE users ADD COLUMN name_v VARCHAR(100) GENERATED ALWAYS AS (JSON_UNQUO
 CREATE INDEX idx_name_v ON users(name_v);
 ```
 
+<div class="quiz" data-quiz-id="q-json-sargable">
+<div class="quiz-kind">⚡ Scenario · how to make this faster</div>
+<div class="quiz-q">MySQL table <code>users(id, data JSON)</code> with 20M rows. <code>SELECT * FROM users WHERE JSON_EXTRACT(data, '$.email') = 'x@y.com';</code> is doing a full scan. Which fix actually makes it index-seekable?</div>
+<ol class="quiz-opts">
+<li>Add a plain B-tree index: <code>CREATE INDEX ix ON users(data);</code></li>
+<li data-correct>Add a stored generated column for email and index that: <code>ALTER TABLE users ADD email_v VARCHAR(255) GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(data,'$.email'))) STORED; CREATE INDEX ix ON users(email_v);</code></li>
+<li>Rewrite as <code>WHERE data LIKE '%x@y.com%'</code>.</li>
+<li>Add <code>LIMIT 1</code> so the optimizer stops scanning.</li>
+</ol>
+<div class="quiz-why">You can't B-tree-index a raw <code>JSON</code> column for arbitrary path equality — the index doesn't know about paths inside the blob. The idiomatic fix is a <strong>generated (virtual/stored) column</strong> that materializes the path, plus a regular index on that column. <code>LIKE '%...%'</code> is a leading wildcard (still a full scan). <code>LIMIT 1</code> caps rows returned, not rows scanned before the first match.</div>
+</div>
+
 ---
 ---
 
@@ -5166,6 +6019,30 @@ CREATE INDEX idx_name_v ON users(name_v);
 | `WHERE DATE(created_at) = '2024-01-15'` | `WHERE created_at >= '2024-01-15' AND created_at < '2024-01-16'` |
 
 💡 **General principle:** Keep the column "naked" on one side of the comparison. Move all operations to the constant side.
+
+<div class="quiz" data-quiz-id="q-sargable-date">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You have a B-tree index on <code>orders(created_at)</code>. Which <code>WHERE</code> clause actually uses the index for "orders in 2024"?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE YEAR(created_at) = 2024</code></li>
+    <li><code>WHERE DATE_FORMAT(created_at, '%Y') = '2024'</code></li>
+    <li data-correct><code>WHERE created_at &gt;= '2024-01-01' AND created_at &lt; '2025-01-01'</code></li>
+    <li><code>WHERE CAST(created_at AS DATE) BETWEEN '2024-01-01' AND '2024-12-31'</code></li>
+  </ol>
+  <div class="quiz-why">Any function wrapping the indexed column (<code>YEAR</code>, <code>DATE_FORMAT</code>, <code>CAST</code>) forces the engine to evaluate it per row → full scan. A half-open range <code>&gt;= start AND &lt; next_start</code> lets the B-tree seek directly to the first matching row and scan sequentially until the upper bound. <strong>BETWEEN with a cast</strong> looks equivalent but still breaks sargability because of the <code>CAST</code>.</div>
+</div>
+
+<div class="quiz" data-quiz-id="q-leading-wildcard">
+  <div class="quiz-kind">Theory</div>
+  <div class="quiz-q">Which <code>LIKE</code> pattern can use a standard B-tree index on <code>name</code>?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE name LIKE '%son'</code></li>
+    <li data-correct><code>WHERE name LIKE 'Jo%'</code></li>
+    <li><code>WHERE name LIKE '%John%'</code></li>
+    <li><code>WHERE LOWER(name) LIKE 'jo%'</code></li>
+  </ol>
+  <div class="quiz-why">A B-tree stores values sorted left-to-right, so it can seek the first key starting with <code>'Jo'</code> and stop at the last. A leading wildcard defeats the seek — the engine has to examine every row. Wrapping with <code>LOWER()</code> also breaks it (no naked column). For case-insensitive prefix search, use a case-insensitive collation or a functional index on <code>LOWER(name)</code>.</div>
+</div>
 
 ### LIKE and Indexes
 
@@ -5279,6 +6156,18 @@ SELECT * FROM t WHERE col_b = 2 AND col_a != 1  -- deduplicate if needed
 - Write-heavy tables where reads are rare — indexes slow down INSERT/UPDATE
 - Already indexed via PRIMARY KEY or UNIQUE constraint
 
+<div class="quiz" data-quiz-id="q-leftmost-prefix">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You have <code>CREATE INDEX idx ON orders(customer_id, order_date)</code>. Which query can use this index efficiently?</div>
+  <ol class="quiz-opts">
+    <li><code>WHERE order_date = '2024-01-15'</code></li>
+    <li><code>WHERE YEAR(order_date) = 2024 AND customer_id = 7</code></li>
+    <li data-correct><code>WHERE customer_id = 7 AND order_date &gt;= '2024-01-01'</code></li>
+    <li><code>WHERE order_date &gt; '2024-01-01'</code> ordered by <code>customer_id</code></li>
+  </ol>
+  <div class="quiz-why">Composite indexes are physically sorted by the leftmost column first. Queries filtering on <code>customer_id</code> (the leading column) can use the index; queries filtering only on <code>order_date</code> cannot. Wrapping <code>order_date</code> in <code>YEAR()</code> also kills sargability.</div>
+</div>
+
 ---
 
 ## 6.3 ORDER BY + LIMIT Traps
@@ -5341,6 +6230,18 @@ WHERE (created_at, id) > (:last_created_at, :last_id)
 ORDER BY created_at, id
 LIMIT 20;
 ```
+
+<div class="quiz" data-quiz-id="q-order-by-ties">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You run <code>SELECT * FROM employees ORDER BY salary DESC LIMIT 5</code> and the test passes locally but flakes in CI. Ten employees share the top salary. Safest fix?</div>
+  <ol class="quiz-opts">
+    <li>Raise LIMIT to 10 so all tied rows come through</li>
+    <li>Add <code>DISTINCT</code></li>
+    <li data-correct>Add a unique tiebreaker: <code>ORDER BY salary DESC, id ASC</code></li>
+    <li>Wrap the query in a CTE</li>
+  </ol>
+  <div class="quiz-why">With ties on the sort key, <code>LIMIT</code> picks arbitrarily among them — which row wins can vary across engines, indexes, and even re-runs. A unique tiebreaker column (PK) makes the order deterministic.</div>
+</div>
 
 ---
 
@@ -5416,6 +6317,18 @@ VALUES (42, 99.99);
 ```
 
 💡 Saves a round-trip and eliminates race conditions between "INSERT then SELECT" (the row you inserted may be one of many concurrent inserts). Essential for auto-generated PKs.
+
+<div class="quiz" data-quiz-id="q-upsert-choice">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You need to either <em>insert</em> a <code>(product_id, quantity)</code> row or <em>add</em> the new quantity to the existing row — atomically. On PostgreSQL, which is the idiomatic fit?</div>
+  <ol class="quiz-opts">
+    <li><code>INSERT</code> in a transaction; catch unique-violation and <code>UPDATE</code> in app code</li>
+    <li>Run <code>SELECT FOR UPDATE</code> first, then branch</li>
+    <li data-correct><code>INSERT ... ON CONFLICT (product_id) DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity</code></li>
+    <li><code>REPLACE INTO inventory VALUES (...)</code></li>
+  </ol>
+  <div class="quiz-why"><code>ON CONFLICT</code> (Postgres) and <code>ON DUPLICATE KEY UPDATE</code> (MySQL) perform atomic upsert without race conditions. <code>REPLACE INTO</code> is MySQL-specific and actually does DELETE + INSERT — which can break FK cascades. ANSI <code>MERGE</code> is supported by SQL Server/Oracle.</div>
+</div>
 
 ### 🔗 Practice Problems
 
@@ -5534,6 +6447,18 @@ COMMIT;
 
 💡 `SKIP LOCKED` is the standard way to build a reliable SQL-backed job queue without an external message broker.
 
+<div class="quiz" data-quiz-id="q-isolation-phantom">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">Transaction A reads <code>SELECT COUNT(*) FROM orders WHERE status='new'</code> twice. Between the reads, B commits a new <code>INSERT</code> that matches the filter, and A sees a different count. Which phenomenon is this, and which level prevents it per the SQL standard?</div>
+  <ol class="quiz-opts">
+    <li>Dirty read — prevented by READ COMMITTED</li>
+    <li>Non-repeatable read — prevented by REPEATABLE READ</li>
+    <li data-correct>Phantom read — prevented by SERIALIZABLE</li>
+    <li>Lost update — prevented by READ UNCOMMITTED</li>
+  </ol>
+  <div class="quiz-why">A re-run query returning <em>new rows</em> is a phantom; a re-read of the <em>same row</em> returning different values is a non-repeatable read. Only SERIALIZABLE prevents phantoms per the SQL standard — though MySQL InnoDB's REPEATABLE READ uses next-key locks to prevent them anyway.</div>
+</div>
+
 ---
 
 ## 6.6 Temporary Tables, CTEs, and Views
@@ -5602,6 +6527,18 @@ REFRESH MATERIALIZED VIEW monthly_stats;
 
 💡 **CTE performance nuance:** PostgreSQL 12+ inlines CTEs by default (like subqueries). Use `WITH cte AS MATERIALIZED (...)` to force materialization if the CTE result is reused multiple times.
 
+<div class="quiz" data-quiz-id="q-cte-vs-temp">
+  <div class="quiz-kind">Scenario</div>
+  <div class="quiz-q">You build a complex aggregate result, then run 4 different reports against it within the same session. The aggregate is expensive. Best fit?</div>
+  <ol class="quiz-opts">
+    <li>A CTE inside each report query</li>
+    <li>A plain <code>VIEW</code></li>
+    <li data-correct>A <code>TEMPORARY TABLE</code> populated once, queried 4 times</li>
+    <li>Four identical subqueries</li>
+  </ol>
+  <div class="quiz-why">CTEs and views are re-evaluated every time they're referenced. A temp table materializes once, is indexable, and lives for the session — perfect for expensive intermediate results reused multiple times. Use a materialized view if you need persistence across sessions.</div>
+</div>
+
 ---
 
 ## 6.7 Stored Procedures, Functions & Triggers
@@ -5652,7 +6589,6 @@ CALL transfer_funds(1, 2, 100.00);
 
 💡 **Should you use triggers?** Usually **no**. Triggers are invisible to the application code — a new engineer reading an `UPDATE` statement has no idea that five other tables also changed, a Kafka message fired, and an audit row was written. Prefer putting business logic in application code (visible, testable, version-controlled) or in a **database transaction** that explicitly does the follow-up work. Reach for triggers only when: (a) you need the invariant enforced regardless of which client writes to the table, (b) you're doing pure bookkeeping (row-count maintenance, audit trails), or (c) you can't change the writing application. When you do use them, keep them short and never trigger network calls or cross-database writes from inside one.
 
-
 ```sql
 -- PostgreSQL: Log salary changes automatically
 CREATE OR REPLACE FUNCTION log_salary_change()
@@ -5681,6 +6617,18 @@ CREATE TRIGGER trg_salary_audit
 - **SQL Server 2019+**: scalar-UDF inlining — works only when the UDF is deterministic and avoids certain constructs. Verify with `sys.sql_modules.is_inlineable`.
 - **PostgreSQL**: declare `IMMUTABLE` or `STABLE` (never `VOLATILE` for pure computation) so the planner can cache / inline the call and so functional indexes are usable.
 - **General rule:** if a UDF wraps a single expression, prefer the expression (or a generated column, §1.2) over the function.
+
+<div class="quiz" data-quiz-id="q-scalar-udf-perf">
+<div class="quiz-kind">⚡ Scenario · how to make this faster</div>
+<div class="quiz-q">A 10M-row report query <code>SELECT full_name(first, last), ... FROM employees WHERE dept_id = 7;</code> is 30× slower than inlining <code>first || ' ' || last</code>. In SQL Server / PostgreSQL, which change reliably fixes it without moving logic out of SQL?</div>
+<ol class="quiz-opts">
+<li>Add an index on <code>dept_id</code>. The UDF overhead will disappear once the scan is narrower.</li>
+<li>Rewrite the UDF as a stored <strong>procedure</strong> instead.</li>
+<li>Wrap the SELECT in a <strong>trigger</strong> so it caches the result.</li>
+<li data-correct>Mark the function <code>IMMUTABLE</code>/<code>DETERMINISTIC</code> (or inline the expression / use a generated column) so the optimizer can inline it and stop the per-row call overhead.</li>
+</ol>
+<div class="quiz-why">Scalar UDFs are called per row and often block inlining + parallelism. Declaring the function <code>IMMUTABLE</code> (Postgres) or <code>DETERMINISTIC</code> (MySQL/SQL Server inlining) lets the planner treat it as a pure expression. Narrowing rows via an index helps a bit but doesn't fix the per-row function-call cost. Procedures can't be used in a SELECT list. Triggers don't cache computed columns.</div>
+</div>
 
 ---
 ---
