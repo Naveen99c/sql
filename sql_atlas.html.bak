@@ -1331,7 +1331,8 @@ function buildTree(root) {
     // any H1 that is NOT "Phase N — …" gets preamble treatment
     if (!isPhase) {
       phaseNode.classList.add("phase-preamble");
-      phaseNode.open = true; // preamble is always open by default
+      // Preambles (How to read this Atlas, Quick Reference) stay collapsed
+      // by default — users open them on demand like any other phase.
       sum.innerHTML = `
         <span class="caret-tri"></span>
         <span style="display:flex;align-items:center;gap:14px;">
