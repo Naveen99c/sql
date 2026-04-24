@@ -6897,7 +6897,13 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                     this.executed = true;
                     this.submitted = false;
                     this.error = null;
-                    
+                    // RUN is a plain "try your query on the example data" — clear any
+                    // lingering hidden-case results from a previous Submit so the panel
+                    // below "Your Output" doesn't confuse the user.
+                    this.caseResults = [];
+                    this.isValidationFailed = false;
+                    this.expectedResults = [];
+
                     // Always ensure we are testing on Sample Data on RUN
                     this.buildDB();
                     try {
