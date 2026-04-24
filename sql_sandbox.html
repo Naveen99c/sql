@@ -1181,7 +1181,25 @@
                         matchBrackets: true,
                         autoCloseBrackets: true
                     });
-                    this.insertTemplate();
+                    // Restore any locally-saved draft for this problem before we
+                    // wire up the autosave handler, so we don't overwrite the
+                    // freshly-loaded value with its own re-save.
+                    this.restoreDraftOrTemplate();
+
+                    // Autosave: every keystroke writes the editor's value to
+                    // localStorage under a per-slug key. The only way to clear
+                    // the draft is the Reset button (see insertTemplate()).
+                    // Failures (quota / private mode) are swallowed silently —
+                    // autosave is best-effort and must never break the editor.
+                    const slug = this.slug;
+                    _cmEditor.on('change', () => {
+                        try {
+                            localStorage.setItem(
+                                `atlas.draft.${slug}`,
+                                _cmEditor.getValue()
+                            );
+                        } catch (_) {}
+                    });
 
                     // Force CodeMirror to re-measure character widths AFTER the
                     // panel's final size is known + webfonts are loaded.
@@ -1238,8 +1256,31 @@
                     this.buildDB();
                 },
                 
+                // Bound to the Reset chip. Clears any locally-saved draft for
+                // this problem, then restores the starter template. Reset is
+                // the *only* user action that discards the autosaved draft.
                 insertTemplate() {
-                    _cmEditor.setValue("-- Write your MySQL query statement below\n");
+                    try { localStorage.removeItem(`atlas.draft.${this.slug}`); } catch (_) {}
+                    if (_cmEditor) {
+                        _cmEditor.setValue("-- Write your MySQL query statement below\n");
+                    }
+                },
+
+                // Called once during init() after the editor is constructed.
+                // If a draft exists in localStorage for this slug, restore it;
+                // otherwise drop the starter template in. Runs BEFORE we attach
+                // the change-listener, so restoring doesn't immediately re-save.
+                restoreDraftOrTemplate() {
+                    let draft = null;
+                    try { draft = localStorage.getItem(`atlas.draft.${this.slug}`); } catch (_) {}
+                    if (draft && draft.length) {
+                        _cmEditor.setValue(draft);
+                        // Move caret to the end so the user continues where
+                        // they left off instead of staring at line 1.
+                        _cmEditor.setCursor(_cmEditor.lineCount(), 0);
+                    } else {
+                        _cmEditor.setValue("-- Write your MySQL query statement below\n");
+                    }
                 },
 
                 // ── Timer helpers ───────────────────────────────────────

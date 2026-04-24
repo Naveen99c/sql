@@ -494,6 +494,48 @@
     justify-content: flex-end;
   }
 
+  /* ------- Star button (per-section favourite) -------
+     Rendered as an outlined ☆ glyph inside each phase/section/subnode summary.
+     Clicking toggles `starred` state which is persisted under atlas.star.<id>.
+     The summary's native toggle is suppressed on click so starring doesn't
+     accidentally collapse/expand the node. */
+  summary .star-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    margin-right: 6px;
+    border-radius: 50%;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    opacity: 0.4;
+    transition: color 180ms ease, opacity 180ms ease, transform 160ms ease,
+                background 180ms ease;
+    user-select: none;
+    flex: 0 0 auto;
+  }
+  summary:hover .star-btn { opacity: 0.85; }
+  summary .star-btn:hover {
+    color: var(--amber);
+    opacity: 1;
+    transform: scale(1.18);
+    background: rgba(229,166,59,0.07);
+  }
+  summary .star-btn.starred {
+    color: var(--amber-hot);
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(229,166,59,0.45);
+  }
+
+  /* Starred-only facet: slight accent when active. */
+  .facet[data-facet="starred"].active {
+    background: var(--amber-hot);
+    color: var(--ink);
+    border-color: var(--amber-hot);
+  }
+
   /* status dot */
   .status { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; margin-right: 4px; }
   .status.todo { color: var(--muted); }
@@ -898,6 +940,7 @@
 
     <div class="facets mb-3 reveal" style="animation-delay:.45s" id="facetBar">
       <button class="facet active" data-facet="all">All</button>
+      <button class="facet" data-facet="starred" title="Show only sections you have starred">★ Starred</button>
       <button class="facet" data-facet="diff:Easy">Easy</button>
       <button class="facet" data-facet="diff:Medium">Medium</button>
       <button class="facet" data-facet="diff:Hard">Hard</button>
@@ -1102,6 +1145,7 @@ function buildTree(root) {
             <span class="phase-sub">Doc preface · Legend · Navigation</span>
           </span>
         </span>
+        <span class="star-btn" role="button" tabindex="0" aria-label="Star this section" title="Star this section">☆</span>
         <span class="meta"></span>
       `;
     } else {
@@ -1114,6 +1158,7 @@ function buildTree(root) {
             <span class="phase-sub">${phaseBlurb(title)}</span>
           </span>
         </span>
+        <span class="star-btn" role="button" tabindex="0" aria-label="Star this section" title="Star this section">☆</span>
         <span class="meta"></span>
       `;
     }
@@ -1151,6 +1196,7 @@ function buildTree(root) {
           <span class="sec-sub"></span>
         </span>
       </span>
+      <span class="star-btn" role="button" tabindex="0" aria-label="Star this section" title="Star this section">☆</span>
       <span class="meta"></span>
     `;
     sectionNode.appendChild(sum);
@@ -1181,6 +1227,7 @@ function buildTree(root) {
         <span class="sub-glyph">▸</span>
         <span class="sub-title">${title}</span>
       </span>
+      <span class="star-btn" role="button" tabindex="0" aria-label="Star this section" title="Star this section">☆</span>
       <span class="meta"></span>
     `;
     subNode.appendChild(sum);
@@ -1473,6 +1520,39 @@ function openTo(idOrSlug) {
     setTimeout(() => highlightPill.classList.remove("pill-flash"), 1800);
   }
   if (history.replaceState && el.id) history.replaceState(null, "", "#" + el.id);
+  // Remember this destination as the auto-resume target for next page load.
+  if (el.id && el.matches && el.matches(".phase-node, .section-node, .subnode")) {
+    try { localStorage.setItem("atlas.lastSection", el.id); } catch (_) {}
+  }
+}
+
+/* =====================================================================
+   STAR / FAVOURITE (per-section)
+   ===================================================================== */
+// localStorage schema:  atlas.star.<nodeId> = "1"   (presence = starred)
+// We paint per-node on render and on every toggle so the whole cascade
+// (tree summary + sidebar if mirrored later) stays in sync.
+function isStarred(id) {
+  try { return !!localStorage.getItem("atlas.star." + id); } catch (_) { return false; }
+}
+function setStarred(id, on) {
+  try {
+    if (on) localStorage.setItem("atlas.star." + id, "1");
+    else    localStorage.removeItem("atlas.star." + id);
+  } catch (_) {}
+}
+function paintStars(root) {
+  (root || document).querySelectorAll(".phase-node, .section-node, .subnode").forEach(node => {
+    const btn = node.querySelector(":scope > summary .star-btn");
+    if (!btn) return;
+    const on = isStarred(node.id);
+    btn.classList.toggle("starred", on);
+    btn.textContent = on ? "★" : "☆";
+    // Also tag the node so the starred-facet filter can key off a fast
+    // dataset lookup instead of hitting localStorage per node per re-filter.
+    if (on) node.dataset.starred = "1";
+    else    delete node.dataset.starred;
+  });
 }
 
 /* =====================================================================
@@ -1497,6 +1577,14 @@ function applyFacet(facet) {
         if (val === "todo") keep = !s || s === "todo";
         else if (val === "att") keep = s === "attempted";
         else if (val === "pass") keep = s === "passed";
+      }
+      else if (facet === "starred") {
+        // Keep a node if it is itself starred OR any descendant is starred
+        // (so starring a subnode also keeps its ancestor section visible
+        // as context instead of dimming the whole branch).
+        const selfStarred = n.dataset.starred === "1";
+        const descendantStarred = !!n.querySelector(":scope [data-starred='1']");
+        keep = selfStarred || descendantStarred;
       }
     }
     n.classList.toggle("tree-dim", !keep);
@@ -1645,14 +1733,21 @@ function render() {
   decorate(guide);
   const nodes = buildTree(guide);
   computeAndPaintMeta(nodes);
+  paintStars(guide);
   buildSidebar();
   updateProgress();
   paintResume();
 
-  // deep link handling
+  // deep link handling. Priority:
+  //   1. explicit ?jump=<id> query (CTA from outside)
+  //   2. URL #hash
+  //   3. localStorage `atlas.lastSection` — auto-resume where the user last was
   const hash = location.hash.slice(1);
   const jumpParam = new URLSearchParams(location.search).get("jump");
-  const target = jumpParam || hash;
+  let target = jumpParam || hash;
+  if (!target) {
+    try { target = localStorage.getItem("atlas.lastSection") || ""; } catch (_) {}
+  }
   if (target) {
     requestAnimationFrame(() => openTo(target));
   }
@@ -1731,6 +1826,64 @@ document.addEventListener("DOMContentLoaded", () => {
       if (getStatus(a.dataset.slug) === "todo") setStatus(a.dataset.slug, "attempted");
     }
   });
+
+  // Star toggle — event delegation on the guide. `capture:true` lets us
+  // preventDefault BEFORE the <summary>'s native toggle fires, so starring
+  // doesn't also collapse or expand the node.
+  $("#guide").addEventListener("click", (e) => {
+    const btn = e.target.closest(".star-btn");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const node = btn.closest(".phase-node, .section-node, .subnode");
+    if (!node || !node.id) return;
+    const on = !isStarred(node.id);
+    setStarred(node.id, on);
+    btn.classList.toggle("starred", on);
+    btn.textContent = on ? "★" : "☆";
+    if (on) node.dataset.starred = "1";
+    else    delete node.dataset.starred;
+    // Re-apply current facet so the starred-only filter updates live.
+    if (activeFacet === "starred") applyFacet("starred");
+  }, true);
+
+  // Track the last-viewed section. An IntersectionObserver watches every
+  // phase / section / subnode summary-bearing node; whichever one is closest
+  // to the top of the viewport is persisted as `atlas.lastSection`. Also
+  // update on explicit navigation (sidebar / palette → openTo).
+  function installLastSectionTracker() {
+    const candidates = $$("#guide .phase-node, #guide .section-node, #guide .subnode")
+      .filter(n => n.id);
+    if (!candidates.length || !window.IntersectionObserver) return;
+
+    // We want the topmost section currently intersecting the viewport.
+    // Use a narrow band near the top so "whichever one is just below the
+    // toolbar" wins — matches how most docs sites track current section.
+    const visible = new Set();
+    let saveTimer = null;
+    const rootMargin = "-80px 0px -70% 0px";
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) visible.add(e.target);
+        else visible.delete(e.target);
+      }
+      if (!visible.size) return;
+      // Pick the target with the smallest top offset (topmost in reading order).
+      let best = null, bestTop = Infinity;
+      visible.forEach(el => {
+        const top = el.getBoundingClientRect().top;
+        if (top < bestTop) { bestTop = top; best = el; }
+      });
+      if (!best || !best.id) return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        try { localStorage.setItem("atlas.lastSection", best.id); } catch (_) {}
+      }, 250);
+    }, { rootMargin, threshold: [0, 0.01] });
+    candidates.forEach(n => io.observe(n));
+  }
+  // Defer until the tree is fully painted.
+  requestAnimationFrame(() => requestAnimationFrame(installLastSectionTracker));
 
   // Centralised refresh — repaints every status-dependent surface. Exposed on
   // `window` so the sandbox overlay (same-document, so `storage` events never
