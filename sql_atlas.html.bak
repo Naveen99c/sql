@@ -1732,25 +1732,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // storage event — refresh when sandbox writes status in another tab
+  // Centralised refresh — repaints every status-dependent surface. Exposed on
+  // `window` so the sandbox overlay (same-document, so `storage` events never
+  // fire) can invoke it directly when a problem is passed or the overlay closes.
+  function refreshAtlasProgress() {
+    const nodes = $$("#guide details");
+    computeAndPaintMeta(nodes.filter(n => n.dataset.title));
+    paintPillStatuses(document.getElementById("guide"));
+    updateProgress();
+    paintResume();
+  }
+  window.refreshAtlasProgress = refreshAtlasProgress;
+
+  // storage event — fires only for cross-document writes (sandbox opened in
+  // a separate tab).
   window.addEventListener("storage", (e) => {
-    if (e.key?.startsWith("atlas.status.")) {
-      const nodes = $$("#guide details");
-      computeAndPaintMeta(nodes.filter(n => n.dataset.title));
-      paintPillStatuses(document.getElementById("guide"));
-      updateProgress();
-      paintResume();
-    }
+    if (e.key?.startsWith("atlas.status.")) refreshAtlasProgress();
   });
-  // also refresh on tab-visible (in case sandbox ran in the same tab via popup)
+  // Same-tab bridge — the in-page sandbox overlay dispatches this custom event
+  // after writing `atlas.status.<slug>`, since `storage` events are silent in
+  // the same document.
+  window.addEventListener("atlas:status-change", () => refreshAtlasProgress());
+  // Also refresh on tab-visible (in case sandbox ran in a popup).
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      const nodes = $$("#guide details");
-      computeAndPaintMeta(nodes.filter(n => n.dataset.title));
-      paintPillStatuses(document.getElementById("guide"));
-      updateProgress();
-      paintResume();
-    }
+    if (document.visibilityState === "visible") refreshAtlasProgress();
   });
 });
 </script>

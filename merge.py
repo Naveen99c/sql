@@ -369,6 +369,9 @@ bridge_js = """
       try { window.Alpine.destroyTree(mount.firstChild); } catch (_) {}
     }
     mount.innerHTML = '';
+    // Refresh atlas progress surfaces on close. Covers any status-write path
+    // that forgot to dispatch `atlas:status-change` explicitly.
+    try { window.refreshAtlasProgress && window.refreshAtlasProgress(); } catch (_) {}
   }
 
   closeBtn.addEventListener('click', hideSandbox);
