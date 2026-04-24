@@ -3250,6 +3250,7 @@ WHERE NOT EXISTS (
 | 2 | Students and Examinations | Easy | [▶ Practice](sql_sandbox.html?slug=students-and-examinations) |
 | 3 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
 | 4 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) |
+| 5 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) — self-join to list friend-of-friend candidates, anti-join to exclude people already followed. |
 
 ---
 
@@ -4617,6 +4618,7 @@ explosion, reply-thread depth — the recursion builds the transitive closure, t
 | 4 | **Find the Quiet Students in All Exams** | Hard | [▶ Practice](sql_sandbox.html?slug=find-the-quiet-students-in-all-exams) |
 | 5 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) |
 | 6 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) |
+| 7 | **Tree Node** | Medium | [▶ Practice](sql_sandbox.html?slug=tree-node) — classify each node as Root / Inner / Leaf using a self-referencing hierarchy. |
 
 ---
 
@@ -6080,55 +6082,6 @@ What does the problem ask for?
 | 28 | Default `RANGE` window frame on ties | Running totals collapse across tied ORDER BY values; always specify `ROWS`. See §3.3 |
 | 29 | `AVG` on an INT column truncates | PostgreSQL/SQL Server: `AVG(int_col)` returns int — cast one side to `DECIMAL` / `NUMERIC` |
 | 30 | `UNION ALL` column mismatch | Columns align **positionally**, not by name — reordering a SELECT list silently misaligns output |
-
----
-
-## 🎯 Bonus: Special Techniques
-
-Problems that showcase a single unusual technique worth internalising.
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | **Median Given Frequency of Numbers** | Median via cumulative frequency | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
-| 2 | **Friends Recommendations** | Self-join + anti-join filtering | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) |
-| 3 | **Dynamic Pivoting of a Table** | Dynamic SQL + PIVOT | [▶ Practice](sql_sandbox.html?slug=dynamic-pivoting-of-a-table) |
-| 5 | **Tree Node** | Recursive CTE + type classification | [▶ Practice](sql_sandbox.html?slug=tree-node) |
-| 6 | **Product Price at a Given Date** | As-of / SCD Type-2 lookup (see §4.5) | [▶ Practice](sql_sandbox.html?slug=product-price-at-a-given-date) |
-| 7 | **Streamer Banned Accounts** | Interval overlap on same account | [▶ Practice](sql_sandbox.html?slug=leetflex-banned-accounts) |
-| 8 | **Friday Purchases I** | Weekday bucketing via `DAYOFWEEK` / `EXTRACT(DOW)` | [▶ Practice](sql_sandbox.html?slug=friday-purchases-i) |
-
----
-
-## 📌 Study Order Recommendation
-
-> **Phase A — Foundation Patterns (tackle first):**
-> 1. Aggregation + GROUP BY + HAVING (§2.1)
-> 2. Subqueries & CTEs (§2.2)
-> 3. Self-Joins (§2.3)
-> 4. Anti-Joins (§2.4)
->
-> **Phase B — Window Functions:**
-> 5. Ranking (§3.1)
-> 6. LAG / LEAD (§3.2)
-> 7. Window Frames (§3.3)
->
-> **Phase C — Advanced:**
-> 8. Gaps & Islands (§4.1)
-> 9. Date Functions (§5.1)
-> 10. CONCAT / GROUP_CONCAT (§5.2)
-> 11. Pivoting (§4.4)
-> 12. Recursive CTEs (§4.3)
->
-> **Phase D — Must-Do Hard Problems (final boss):**
-> 1. [**Median Given Frequency of Numbers**](sql_sandbox.html?slug=median-given-frequency-of-numbers) — odd/even handling via window + cumulative counts (§3.3)
-> 2. [**Department Top Three Salaries**](sql_sandbox.html?slug=department-top-three-salaries) — DENSE_RANK per partition, Top-N pattern (§3.1)
-> 3. [**Human Traffic of Stadium**](sql_sandbox.html?slug=human-traffic-of-stadium) — 3+ consecutive rows, id-vs-row-number trick (§4.1)
-> 4. [**Find Cumulative Salary of an Employee**](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) — multi-CTE window math with boundary handling (§3.3 + §2.2)
-> 5. [**Last Person to Fit in the Bus**](sql_sandbox.html?slug=last-person-to-fit-in-the-bus) — running sum with a ≤ capacity stop-condition (§3.3)
-> 6. [**Students Report By Geography**](sql_sandbox.html?slug=students-report-by-geography) — conditional aggregation across ranked buckets (§4.4 + §3.1)
-> 7. [**Consecutive Transactions with Increasing Amounts**](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) — multi-condition gaps & islands (§4.1)
-
----
 
 ---
 
