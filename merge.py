@@ -194,16 +194,28 @@ overlay_styles = """
 }
 body.sandbox-open { overflow: hidden; }
 
-/* Mobile — compact overlay chrome, stacked workspace */
+/* Mobile — compact overlay chrome, stacked workspace with vertical scroll.
+   The stacked panes (problem + editor + console) exceed 100vh, so we must
+   let the overlay itself scroll vertically; internal flex:1/min-height:0
+   constraints would otherwise clip everything below the fold. */
 @media (max-width: 768px) {
-  .sandbox-overlay-bar { padding: 0 12px; gap: 10px; flex: 0 0 40px; }
+  .sandbox-overlay { overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; }
+  .sandbox-overlay-bar { padding: 0 12px; gap: 10px; flex: 0 0 40px; position: sticky; top: 0; z-index: 2; }
   .sandbox-close-btn { padding: 5px 10px; font-size: 0.62rem; letter-spacing: 0.1em; }
   .sandbox-crumb { font-size: 0.62rem; letter-spacing: 0.02em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; min-width: 0; }
-  #sandboxMount .workspace { padding: 0.4rem !important; gap: 0.4rem !important; flex-direction: column !important; height: auto !important; }
-  #sandboxMount .left-pane, #sandboxMount .right-pane { flex: 0 0 auto !important; width: 100% !important; max-width: none !important; min-width: 0 !important; }
-  #sandboxMount .left-pane { min-height: 42vh; max-height: 55vh; }
-  #sandboxMount .editor-env  { min-height: 40vh; }
-  #sandboxMount .console-env { min-height: 45vh; }
+  /* Let mount grow to fit its children instead of being clamped to 100vh. */
+  #sandboxMount { flex: 0 0 auto !important; min-height: 0 !important; height: auto !important; }
+  #sandboxMount > div { flex: 0 0 auto !important; min-height: 0 !important; height: auto !important; }
+  #sandboxMount .workspace { padding: 0.4rem !important; gap: 0.4rem !important; flex-direction: column !important; height: auto !important; min-height: 0 !important; }
+  #sandboxMount .left-pane, #sandboxMount .right-pane { flex: 0 0 auto !important; width: 100% !important; max-width: none !important; min-width: 0 !important; display: flex; flex-direction: column; }
+  #sandboxMount .right-pane { gap: 0.4rem; }
+  /* Use fixed heights (not min/max) so panes size predictably in the scrollable overlay. */
+  #sandboxMount .left-pane   { height: 55vh !important; max-height: none !important; }
+  #sandboxMount .editor-env  { height: 45vh !important; min-height: 0 !important; flex: 0 0 auto !important; }
+  #sandboxMount .console-env { height: 50vh !important; min-height: 0 !important; flex: 0 0 auto !important; }
+  #sandboxMount #editorWrap  { flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; }
+  #sandboxMount .content-body,
+  #sandboxMount .tab-content { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 </style>
 """
