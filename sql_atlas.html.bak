@@ -353,7 +353,8 @@
     list-style: none;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 1.6rem 1fr auto;
+    /* caret · title · star · meta-chips */
+    grid-template-columns: 1.6rem 1fr auto auto;
     align-items: center;
     gap: 12px;
     padding: 12px 0;
@@ -826,13 +827,20 @@
     .phase-node > summary,
     .section-node > summary,
     .subnode > summary {
-      grid-template-columns: 1.2rem 1fr !important;
+      grid-template-columns: 1.2rem 1fr auto !important;
       gap: 8px !important;
+    }
+    /* Star pinned at top-right of the summary on mobile */
+    .phase-node > summary > .star-btn,
+    .section-node > summary > .star-btn,
+    .subnode > summary > .star-btn {
+      grid-column: 3;
+      grid-row: 1;
     }
     .phase-node > summary > .meta,
     .section-node > summary > .meta,
     .subnode > summary > .meta {
-      grid-column: 2;
+      grid-column: 1 / span 3;
       margin-top: 4px;
       display: flex;
       flex-wrap: wrap;

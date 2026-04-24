@@ -12,6 +12,12 @@
          closebrackets auto-inserts the closing half when you type an opener. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <!-- show-hint + sql-hint power the autocomplete popover: SQL keywords,
+         table names (from the problem's schema), column names, and
+         "alias.column" suggestions (sql-hint parses FROM/JOIN … AS alias). -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/sql-hint.min.js"></script>
     <!--
       Custom compact SQL formatter (see formatSQLCompact below). sql-formatter
       v15 and older all explode CASE/COALESCE/SUM across many lines regardless
@@ -114,18 +120,113 @@
 
         function formatSQLCompact(sql) {
             var real = mergeClauses(tokenize(sql));
+            // Lines longer than this force long CASE expressions to break each
+            // WHEN/ELSE onto its own line (with END aligned under CASE). Short
+            // CASEs that fit under this budget stay inline.
+            var MAX_WIDTH = 100;
             function indent(n) { var s=''; for (var k=0;k<n;k++) s+='    '; return s; }
             var lines = []; var cur = ''; var level = 0;
-            var pstk = []; // each frame: {kind:'subquery', lvl} or {kind:'inline'}
+            // Frame kinds:
+            //   {kind:'subquery', lvl}              — ( SELECT … )
+            //   {kind:'inline'}                     — function args / tuples / OVER(…)
+            //   {kind:'case-multiline', caseCol}    — long CASE broken across lines;
+            //                                         WHEN/ELSE newline + indent to
+            //                                         caseCol+4, END aligned at caseCol.
+            //   {kind:'case-inline'}                — short CASE that fits on one
+            //                                         line; pushed purely so nested
+            //                                         CASEs don't inherit a parent
+            //                                         multi-line frame's indent.
+            var pstk = [];
 
             function commit() { if (cur.trim().length) lines.push(cur.replace(/\s+$/,'')); cur = ''; }
             function breakTo(lvl) { commit(); cur = indent(lvl); }
+            function breakToCol(col) { commit(); var s=''; for (var k=0;k<col;k++) s += ' '; cur = s; }
             function subLvl() { for (var j = pstk.length-1; j>=0; j--) if (pstk[j].kind==='subquery') return pstk[j].lvl; return -1; }
             function hasInline() { return pstk.some(function (f) { return f.kind === 'inline'; }); }
+            function topFrame() { return pstk.length ? pstk[pstk.length - 1] : null; }
+
+            // Scan from a CASE index forward to its matching END; return a rough
+            // char-length estimate of the inline body so we can decide whether
+            // keeping this CASE on one line would overflow MAX_WIDTH.
+            function scanCase(startIdx) {
+                var depth = 1; var len = 0;
+                for (var j = startIdx + 1; j < real.length; j++) {
+                    var tk = real[j];
+                    if (tk.type === 'kw' && tk.val === 'CASE') depth++;
+                    if (tk.type === 'kw' && tk.val === 'END') {
+                        depth--;
+                        if (depth === 0) return { endIdx: j, len: len };
+                    }
+                    len += String(tk.val || '').length + 1;
+                }
+                return { endIdx: real.length - 1, len: len };
+            }
 
             var prev = null;
             for (var i = 0; i < real.length; i++) {
                 var t = real[i];
+
+                // ── CASE: push a frame for every CASE token ────────────
+                // If the inline serialization would exceed MAX_WIDTH we push a
+                // 'case-multiline' frame and WHEN/ELSE/END break onto their own
+                // lines; otherwise we push a 'case-inline' marker so nested
+                // CASEs don't accidentally inherit a parent multi-line frame's
+                // indent rule. The marker pops on the matching END.
+                if (t.type === 'kw' && t.val === 'CASE') {
+                    var sc = scanCase(i);
+                    var col = cur.length;
+                    var overflow = (col + sc.len + 5) > MAX_WIDTH;
+                    if (overflow) {
+                        // Smart-space before appending, same rules as default branch.
+                        if (prev) {
+                            var noSpaceAfterC = prev.type === 'lparen' || (prev.type === 'op' && prev.val === '.');
+                            if (!noSpaceAfterC && cur.length > 0 && !cur.endsWith(' ') && !cur.endsWith('(')) {
+                                cur += ' ';
+                            }
+                        }
+                        var caseCol = cur.length;  // column where 'C' of CASE will be
+                        cur += 'CASE';
+                        pstk.push({ kind: 'case-multiline', caseCol: caseCol });
+                        prev = t;
+                        continue;
+                    }
+                    // Inline CASE: push marker, fall through so the CASE keyword
+                    // itself is emitted by the default branch with normal spacing.
+                    pstk.push({ kind: 'case-inline' });
+                    // fall through
+                }
+
+                // WHEN / ELSE only break when the IMMEDIATE top-of-stack frame
+                // is a multi-line CASE owned by us. Paren frames between us and
+                // the case frame pop naturally before WHEN/ELSE is encountered,
+                // so top-of-stack is sufficient.
+                if (t.type === 'kw' && (t.val === 'WHEN' || t.val === 'ELSE')) {
+                    var tf = topFrame();
+                    if (tf && tf.kind === 'case-multiline') {
+                        breakToCol(tf.caseCol + 4);
+                        cur += t.val;
+                        prev = t;
+                        continue;
+                    }
+                }
+
+                // END pops the matching CASE frame. For multi-line CASE we emit
+                // a fresh line aligned under the CASE keyword; for inline CASE
+                // we simply pop and fall through so END renders with default
+                // smart spacing.
+                if (t.type === 'kw' && t.val === 'END' && pstk.length) {
+                    var tf2 = pstk[pstk.length - 1];
+                    if (tf2.kind === 'case-multiline') {
+                        pstk.pop();
+                        breakToCol(tf2.caseCol);
+                        cur += 'END';
+                        prev = t;
+                        continue;
+                    } else if (tf2.kind === 'case-inline') {
+                        pstk.pop();
+                        // fall through — default branch emits END with smart spacing.
+                    }
+                }
 
                 if (t.type === 'kw' && BREAK_KW.has(t.val) && !hasInline()) {
                     var nearest = subLvl();
@@ -197,6 +298,226 @@
         }
 
         window.formatSQLCompact = formatSQLCompact;
+    })();
+    </script>
+    <!--
+      Smart clause-aware SQL autocomplete. CodeMirror's built-in sql-hint returns
+      the union of {keywords, tables, columns} ranked alphabetically, which means
+      typing "s" after SELECT offers "SUM" above every selectable column. This
+      IIFE wraps that with a context-sensitive ranker:
+
+        * detect current clause by scanning backward for the nearest clause
+          keyword at paren-depth 0 (SELECT / FROM / WHERE / GROUP BY / …);
+        * parse FROM/JOIN … [AS] alias declarations in the entire buffer;
+        * for "alias." suggest only that table's columns;
+        * order candidates so columns come first in SELECT/WHERE/ORDER BY/etc.,
+          tables come first in FROM/JOIN, and keywords sit behind data names
+          (except GROUP BY / ORDER BY where "BY" is more useful than columns).
+    -->
+    <script>
+    (function () {
+        // Reserved words we never want to surface as "column" candidates even
+        // if they appear in a table's column list (defensive — shouldn't).
+        var SQL_KEYWORDS = [
+            'SELECT','FROM','WHERE','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET',
+            'JOIN','LEFT JOIN','RIGHT JOIN','INNER JOIN','OUTER JOIN','CROSS JOIN',
+            'FULL JOIN','ON','USING','AS','WITH','RECURSIVE',
+            'AND','OR','NOT','IN','EXISTS','BETWEEN','LIKE','IS NULL','IS NOT NULL',
+            'CASE','WHEN','THEN','ELSE','END',
+            'UNION','UNION ALL','INTERSECT','EXCEPT','DISTINCT','ALL',
+            'COUNT','SUM','AVG','MIN','MAX','COALESCE','NULLIF','CAST',
+            'ROW_NUMBER','RANK','DENSE_RANK','LAG','LEAD','OVER','PARTITION BY',
+            'ASC','DESC','TRUE','FALSE','NULL'
+        ];
+        // Single-word clause markers we recognise when scanning backward. These
+        // are the canonical set of points where SQL "changes context."
+        var CLAUSE_KW = new Set([
+            'SELECT','FROM','WHERE','GROUP','ORDER','HAVING','ON','JOIN','WITH',
+            'SET','VALUES','INTO','UPDATE'
+        ]);
+
+        // Walk the text left-to-right, ignoring strings/comments, tracking
+        // paren depth so we don't pick up a clause keyword inside a subquery.
+        // Returns the MOST RECENT clause keyword at depth 0 before the cursor.
+        function detectClause(text) {
+            var clause = 'SELECT';  // default for an empty buffer
+            var depth = 0, i = 0, n = text.length;
+            while (i < n) {
+                var c = text[i];
+                // skip -- line comments
+                if (c === '-' && text[i+1] === '-') {
+                    var e = text.indexOf('\n', i); if (e < 0) e = n; i = e; continue;
+                }
+                // skip /* block */ comments
+                if (c === '/' && text[i+1] === '*') {
+                    var e2 = text.indexOf('*/', i+2); if (e2 < 0) e2 = n-2; i = e2+2; continue;
+                }
+                // skip single/double-quoted strings
+                if (c === "'" || c === '"' || c === '`') {
+                    var q = c, j = i+1;
+                    while (j < n) {
+                        if (text[j] === q) { if (text[j+1] === q) { j += 2; continue; } break; }
+                        if (text[j] === '\\') { j += 2; continue; }
+                        j++;
+                    }
+                    i = j+1; continue;
+                }
+                if (c === '(') { depth++; i++; continue; }
+                if (c === ')') { depth--; i++; continue; }
+                // only consider clause keywords at the outermost depth of the
+                // current statement — nested SELECTs shouldn't leak out
+                if (/[A-Za-z_]/.test(c)) {
+                    var j3 = i; while (j3 < n && /[A-Za-z0-9_]/.test(text[j3])) j3++;
+                    var w = text.slice(i, j3).toUpperCase();
+                    if (depth === 0 && CLAUSE_KW.has(w)) {
+                        // Collapse GROUP BY / ORDER BY into their 2-word form
+                        if (w === 'GROUP' || w === 'ORDER') {
+                            // peek ahead for BY
+                            var k = j3; while (k < n && /\s/.test(text[k])) k++;
+                            if (text.slice(k, k+2).toUpperCase() === 'BY') {
+                                clause = w + ' BY';
+                                i = k+2; continue;
+                            }
+                        }
+                        clause = w;
+                    }
+                    i = j3; continue;
+                }
+                i++;
+            }
+            return clause;
+        }
+
+        // Parse the entire buffer for "FROM TableName [AS] alias" and
+        // "JOIN TableName [AS] alias" patterns so we can map `a.` → Table.
+        // Returns { aliasLower: RealTableName }.
+        function detectAliases(text) {
+            var out = {};
+            var re = /\b(?:FROM|JOIN)\s+([A-Za-z_][\w]*)(?:\s+AS)?\s+([A-Za-z_][\w]*)\b/gi;
+            var m;
+            while ((m = re.exec(text))) {
+                var tbl = m[1], alias = m[2];
+                // `ON`, `WHERE`, `GROUP`, `JOIN`, etc. aren't real aliases —
+                // they just happened to follow a table name with no alias.
+                // When we reject, rewind lastIndex so the keyword we just
+                // rejected can begin the next iteration (catches FROM a JOIN
+                // Orders o → Orders/o).
+                if (CLAUSE_KW.has(alias.toUpperCase()) || alias.toUpperCase() === 'AS') {
+                    var aliasPos = m.index + m[0].lastIndexOf(alias);
+                    re.lastIndex = aliasPos;
+                    continue;
+                }
+                out[alias.toLowerCase()] = tbl;
+            }
+            return out;
+        }
+
+        // Return every known table name the editor has been told about.
+        function allTables(tables) { return Object.keys(tables || {}); }
+
+        // Flatten tables → unique column list across the whole schema.
+        function allColumns(tables) {
+            var seen = {}, out = [];
+            Object.keys(tables || {}).forEach(function (t) {
+                (tables[t] || []).forEach(function (col) {
+                    var name = (typeof col === 'string') ? col : (col && col.text) || '';
+                    if (name && !seen[name.toLowerCase()]) {
+                        seen[name.toLowerCase()] = 1;
+                        out.push(name);
+                    }
+                });
+            });
+            return out;
+        }
+
+        // Hint function registered on the editor. Called by CodeMirror every
+        // time the user asks for completions (Ctrl-Space or inputRead).
+        function smartSqlHint(cm, options) {
+            var cur = cm.getCursor();
+            var tok = cm.getTokenAt(cur);
+            // Don't offer completions inside strings or comments.
+            if (tok.type === 'string' || tok.type === 'comment') return null;
+
+            var line = cm.getLine(cur.line);
+            var before = line.slice(0, cur.ch);
+            var after  = line.slice(cur.ch);
+
+            // Grab the identifier chunk the cursor is currently inside/after.
+            // Handles "sele|" (prefix "sele"), "| " (prefix ""), "a.c|" (prefix "a.c").
+            var tailMatch = /([A-Za-z_][\w.]*)?$/.exec(before);
+            var tail = tailMatch ? tailMatch[1] || '' : '';
+            var tailStart = cur.ch - tail.length;
+
+            // Shared knobs
+            var tables = (options && options.tables) || {};
+            var aliases = detectAliases(cm.getValue());
+            var fullBefore = cm.getRange({ line: 0, ch: 0 }, cur);
+            var clause = detectClause(fullBefore);
+
+            // Qualified completion: "alias." or "alias.col"
+            var qual = /([A-Za-z_][\w]*)\.([A-Za-z_]\w*)?$/.exec(before);
+            if (qual) {
+                var aliasTok = qual[1], colPrefix = (qual[2] || '').toLowerCase();
+                var realTable = aliases[aliasTok.toLowerCase()] || aliasTok;
+                // Find table name in a case-insensitive way against the known tables.
+                var tkey = Object.keys(tables).find(function (k) {
+                    return k.toLowerCase() === realTable.toLowerCase();
+                });
+                var cols = tkey ? (tables[tkey] || []) : [];
+                var list = cols
+                    .map(function (c) { return typeof c === 'string' ? c : (c && c.text) || ''; })
+                    .filter(function (c) { return c && c.toLowerCase().indexOf(colPrefix) === 0; });
+                return {
+                    list: list,
+                    from: { line: cur.line, ch: cur.ch - colPrefix.length },
+                    to:   { line: cur.line, ch: cur.ch }
+                };
+            }
+
+            // Unqualified: build candidate buckets and order by clause.
+            var prefix = tail.toLowerCase();
+            var cols = allColumns(tables);
+            var tbls = allTables(tables);
+            var alis = Object.keys(aliases);
+            var kws  = SQL_KEYWORDS;
+
+            // Pick bucket order based on clause. First bucket wins ties — and
+            // since we dedupe in order, the winner shows at the top.
+            var order;
+            if (clause === 'FROM' || clause === 'JOIN') {
+                order = [tbls, alis, kws, cols];
+            } else if (clause === 'SELECT' || clause === 'HAVING') {
+                order = [cols, alis, kws, tbls];
+            } else if (clause === 'WHERE' || clause === 'ON') {
+                order = [cols, alis, kws, tbls];
+            } else if (clause === 'GROUP BY' || clause === 'ORDER BY') {
+                order = [cols, alis, kws, tbls];
+            } else if (clause === 'WITH') {
+                order = [kws, tbls, cols, alis];
+            } else {
+                order = [kws, cols, tbls, alis];
+            }
+
+            var seen = {}, list = [];
+            order.forEach(function (bucket) {
+                bucket.forEach(function (raw) {
+                    var s = String(raw);
+                    var key = s.toLowerCase();
+                    if (seen[key]) return;
+                    if (prefix && key.indexOf(prefix) !== 0) return;
+                    seen[key] = 1;
+                    list.push(s);
+                });
+            });
+
+            return {
+                list: list,
+                from: { line: cur.line, ch: tailStart },
+                to:   { line: cur.line, ch: cur.ch }
+            };
+        }
+
+        window.smartSqlHint = smartSqlHint;
     })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
@@ -447,6 +768,32 @@
             font-weight: 700;
         }
         .cm-s-material-darker .CodeMirror-selected { background: rgba(229,166,59,0.15) !important; }
+
+        /* Autocomplete popover (show-hint) — skinned to match the dark theme. */
+        .CodeMirror-hints {
+            background: rgba(13, 18, 32, 0.98);
+            border: 1px solid var(--ink-line);
+            border-radius: 3px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+            padding: 4px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--parchment-dim);
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 10001; /* above sandbox overlay */
+        }
+        .CodeMirror-hint {
+            padding: 4px 12px;
+            color: var(--parchment-dim);
+            border-radius: 0;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+        li.CodeMirror-hint-active {
+            background: rgba(229,166,59,0.18);
+            color: var(--amber-hot);
+        }
 
         /* Run / Submit */
         .btn {
@@ -1179,7 +1526,42 @@
                         // when the caret is beside a bracket, and auto-close
                         // parens/quotes to keep pairs balanced while typing.
                         matchBrackets: true,
-                        autoCloseBrackets: true
+                        autoCloseBrackets: true,
+                        // Ctrl-Space opens the autocomplete popover manually; a
+                        // debounced `inputRead` handler below opens it on letter
+                        // keystrokes so the user sees suggestions as they type.
+                        extraKeys: {
+                            "Ctrl-Space": "autocomplete",
+                            "Cmd-Space": "autocomplete"
+                        },
+                        hintOptions: {
+                            completeSingle: false,
+                            tables: {},
+                            // Clause-aware ranker defined in the head IIFE.
+                            // Falls back to sql-hint if (somehow) not loaded.
+                            hint: (window.smartSqlHint || CodeMirror.hint.sql)
+                        }
+                    });
+
+                    // Autocomplete trigger: fire hints on identifier characters
+                    // and `.` (so "a." immediately lists that alias's columns).
+                    // Bail early while a hint popover is already open — the
+                    // built-in hint widget handles its own keystrokes then.
+                    _cmEditor.on('inputRead', (cm, change) => {
+                        if (!change || !change.text || !change.text.length) return;
+                        const ch = change.text[0];
+                        if (!/^[A-Za-z_.]$/.test(ch)) return;
+                        if (cm.state.completionActive) return;
+                        // Small delay so fast typing doesn't open/close rapidly.
+                        clearTimeout(cm._hintTimer);
+                        cm._hintTimer = setTimeout(() => {
+                            if (!cm.state.completionActive) {
+                                cm.showHint({
+                                    hint: (window.smartSqlHint || CodeMirror.hint.sql),
+                                    completeSingle: false
+                                });
+                            }
+                        }, 80);
                     });
                     // Restore any locally-saved draft for this problem before we
                     // wire up the autosave handler, so we don't overwrite the
@@ -1558,9 +1940,37 @@
                     try {
                         stmts.forEach(s => this.db.run(this.sanitizeSQL(s)));
                         this.renderSchema();
+                        this.refreshHintTables();
                     } catch(e) {
                         console.error('Schema parsing err:', e);
                     }
+                },
+
+                // Feed the sql-hint addon a { tableName: [col, col, …] } map so
+                // CodeMirror's autocomplete knows what tables/columns exist.
+                // Called after each buildDB() so per-problem schemas take over
+                // as the user navigates between problems.
+                refreshHintTables() {
+                    if (!_cmEditor || !this.db) return;
+                    const tables = {};
+                    try {
+                        const r = this.db.exec("SELECT name FROM sqlite_master WHERE type='table';");
+                        if (r.length && r[0].values) {
+                            r[0].values.forEach(row => {
+                                const tname = row[0];
+                                const colsRes = this.db.exec(`PRAGMA table_info(${tname});`);
+                                const cols = (colsRes[0]?.values || []).map(c => c[1]);
+                                tables[tname] = cols;
+                            });
+                        }
+                    } catch (e) {
+                        // Hint context is best-effort; swallow schema read errors.
+                    }
+                    _cmEditor.setOption('hintOptions', {
+                        completeSingle: false,
+                        tables,
+                        hint: (window.smartSqlHint || CodeMirror.hint.sql)
+                    });
                 },
                 
                 renderSchema() {
