@@ -93,6 +93,18 @@ def scope_selectors(css: str, scope: str) -> str:
                         parts.append(sel)
                     elif sel.startswith("::-webkit-scrollbar"):
                         parts.append(sel)
+                    # CodeMirror's show-hint addon appends the autocomplete
+                    # popover (`.CodeMirror-hints`) directly to <body>, NOT
+                    # inside the editor wrapper. Scoping these selectors to
+                    # `#sandboxOverlay` would make our overrides miss the
+                    # popover entirely — the default show-hint CSS gives it
+                    # z-index: 10, which renders it BEHIND the sandbox
+                    # overlay (z-index: 9999) and users perceive autocomplete
+                    # as broken. Keep these selectors global.
+                    elif (sel.startswith(".CodeMirror-hints")
+                          or sel.startswith(".CodeMirror-hint")
+                          or sel.startswith("li.CodeMirror-hint")):
+                        parts.append(sel)
                     elif sel == "body":
                         parts.append("body.sandbox-open")
                     else:

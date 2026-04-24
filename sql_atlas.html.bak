@@ -3375,11 +3375,14 @@ function updateProgress() {
     currentPhase, localProgress,
     orderedTotal: orderedItems.length,
     firstUnsolved: firstUnsolvedIdx,
-    ordered: orderedItems               // keep the list for segment re-paint
+    ordered: orderedItems,               // full flat list (may include preambles)
+    phaseBuckets                         // cached per-phase groupings
   };
-  // Per-item dash segments — one dash per problem/MCQ, colored by solved state.
-  rebuildVoyageSegments(orderedItems.length);
-  paintVoyageSegments(orderedItems, firstUnsolvedIdx);
+  // Phase-aligned dash segments — each phase's items distributed evenly
+  // inside that phase's 1/8 leg of the route. Keeps amber dashes visually
+  // synced with the ship (which is also phase-aligned).
+  rebuildVoyageSegments(phaseBuckets);
+  paintVoyageSegments(phaseBuckets, currentPhase);
   updateVoyage(voyageFrac, currentPhase, localProgress, solved, uniq.length);
   // Keep the sidebar streak chip fresh (storage can change from other tabs).
   paintSidebarStreak();
@@ -3412,50 +3415,89 @@ let _voyageSegCount = 0;   // current number of dash segments rendered
 // then convert to container percentages (the SVG stretches to fill).
 const _VB_W = 1000, _VB_H = 180;
 
-/* Rebuild the N dash segments along the treasure route. One <use> per
-   problem/MCQ in DOM order. Each segment uses stroke-dasharray +
-   stroke-dashoffset to mask out everything except its own slice of the full
-   path. No-op if the count hasn't changed (cheap to call every update). */
-function rebuildVoyageSegments(count) {
+/* Rebuild the dash segments along the treasure route, grouped by phase.
+   Each phase owns exactly 1/8 of the path (its "leg" between two ports).
+   Inside a phase's leg we lay out ONE dash per problem/MCQ, evenly spaced.
+   That way:
+     • the total count of amber dashes = total solved items (still accurate),
+     • and their POSITIONS stay aligned with the ship — whose position is
+       also phase-aligned — so solving items in Phase 0 fills the Harbor→
+       MENTAL leg, Phase 1 fills MENTAL→SCHEMA, etc.
+   Preamble/orphan items (phase = -1) don't get dashes — they're not part
+   of the voyage.
+   Takes the array of 7 phase buckets [items...] (same order as phases 0..6).
+*/
+function rebuildVoyageSegments(phaseBuckets) {
   const svg  = document.getElementById("voyageMapSvg");
   const path = document.getElementById("treasureRoute");
   const g    = document.getElementById("voyageSegments");
   if (!svg || !path || !g) return;
-  if (count === _voyageSegCount && g.childElementCount === count) return;
+
+  // Cache key — count per phase. If identical, skip the rebuild.
+  const sig = (phaseBuckets || []).map(b => b.length).join(",");
+  if (g.dataset.segSig === sig) return;
   g.innerHTML = "";
-  _voyageSegCount = count;
-  if (count <= 0) return;
+  g.dataset.segSig = sig;
+
+  if (!phaseBuckets || !phaseBuckets.length) { _voyageSegCount = 0; return; }
   const totalLen = path.getTotalLength();
-  if (!totalLen) return;
-  const segLen   = totalLen / count;
-  // 18% of a segment's share goes to the gap between dashes (floor at 1.5
-  // viewBox-units so dashes never visually touch even with high N).
-  const gap      = Math.max(1.5, segLen * 0.18);
-  const dashSize = Math.max(0.5, segLen - gap);
-  const NS = "http://www.w3.org/2000/svg";
-  for (let i = 0; i < count; i++) {
-    const use = document.createElementNS(NS, "use");
-    use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#treasureRoute");
-    use.setAttribute("href", "#treasureRoute");
-    use.setAttribute("class", "voyage-seg");
-    use.setAttribute("data-idx", String(i));
-    use.setAttribute("stroke-dasharray", `${dashSize} ${totalLen}`);
-    use.setAttribute("stroke-dashoffset", String(-i * segLen));
-    g.appendChild(use);
+  if (!totalLen) { _voyageSegCount = 0; return; }
+
+  const legLen = totalLen / 8;             // each phase owns 1/8 of the path
+  const NS     = "http://www.w3.org/2000/svg";
+  let count    = 0;
+
+  for (let p = 0; p < 7; p++) {
+    const bucket = phaseBuckets[p];
+    const K = bucket ? bucket.length : 0;
+    if (!K) continue;
+    const slotLen  = legLen / K;
+    const gap      = Math.max(1, slotLen * 0.22);     // 22% gap
+    const dashSize = Math.max(0.5, slotLen - gap);
+    for (let k = 0; k < K; k++) {
+      const item = bucket[k];
+      const slotStart = p * legLen + k * slotLen;
+      const use = document.createElementNS(NS, "use");
+      use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#treasureRoute");
+      use.setAttribute("href", "#treasureRoute");
+      use.setAttribute("class", "voyage-seg");
+      use.setAttribute("data-phase", String(p));
+      use.setAttribute("data-key", item.key);
+      use.setAttribute("stroke-dasharray", `${dashSize} ${totalLen}`);
+      use.setAttribute("stroke-dashoffset", String(-slotStart));
+      g.appendChild(use);
+      count++;
+    }
   }
+  _voyageSegCount = count;
 }
 
-/* Repaint each dash's state from the ordered to-do list:
+/* Repaint each dash's state:
      • is-solved → amber (problem passed / MCQ correct)
-     • is-current → faint pulse on the FIRST unsolved dash (where the ship is)
-     • else      → brown (unsolved, ahead of the ship) */
-function paintVoyageSegments(orderedItems, firstUnsolvedIdx) {
+     • is-current → faint pulse on the FIRST unsolved dash in the FIRST
+                    still-active phase (where the ship is parked)
+     • else      → brown (unsolved) */
+function paintVoyageSegments(phaseBuckets, currentPhase) {
   const segs = document.querySelectorAll("#voyageSegments .voyage-seg");
-  if (!segs.length || !orderedItems) return;
-  segs.forEach((el, i) => {
-    const it = orderedItems[i];
+  if (!segs.length || !phaseBuckets) return;
+  // Find the key of the first unsolved item in the current phase, if any.
+  let currentKey = null;
+  if (currentPhase >= 0 && currentPhase < 7) {
+    const bucket = phaseBuckets[currentPhase] || [];
+    const hit = bucket.find(it => !it.solved);
+    if (hit) currentKey = hit.key;
+  }
+  // Build a quick lookup from key → item for O(1) paint.
+  const lookup = Object.create(null);
+  for (const bucket of phaseBuckets) {
+    if (!bucket) continue;
+    for (const it of bucket) lookup[it.key] = it;
+  }
+  segs.forEach(el => {
+    const key = el.getAttribute("data-key");
+    const it  = lookup[key];
     el.classList.toggle("is-solved",  !!(it && it.solved));
-    el.classList.toggle("is-current", i === firstUnsolvedIdx && firstUnsolvedIdx !== -1);
+    el.classList.toggle("is-current", key === currentKey);
   });
 }
 
@@ -3998,11 +4040,16 @@ function openVoyageModal(mode, ctx = {}) {
     // Force segments to rebuild — the modal-embedded SVG is a different
     // rendered instance so path lengths need a fresh read.
     _voyageSegCount = 0;
+    const segGroup = document.getElementById("voyageSegments");
+    if (segGroup) delete segGroup.dataset.segSig;   // bust the cache-key
     placeVoyagePorts();
     if (typeof _lastProgress === "object" && _lastProgress) {
-      if (Array.isArray(_lastProgress.ordered)) {
-        rebuildVoyageSegments(_lastProgress.ordered.length);
-        paintVoyageSegments(_lastProgress.ordered, _lastProgress.firstUnsolved);
+      if (Array.isArray(_lastProgress.phaseBuckets)) {
+        rebuildVoyageSegments(_lastProgress.phaseBuckets);
+        paintVoyageSegments(
+          _lastProgress.phaseBuckets,
+          _lastProgress.currentPhase
+        );
       }
       updateVoyage(
         _lastProgress.frac ?? 0,
