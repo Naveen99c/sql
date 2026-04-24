@@ -1061,6 +1061,1012 @@
     .guide-body a.practice-pill { font-size: 0.58rem; padding: 3px 7px; }
     .phase-head, .section-head { font-size: 0.88rem; }
   }
+
+  /* ============ VOYAGE MAP — captain sailing through phases ============ */
+  .voyage-wrap {
+    margin-top: 2rem;
+    max-width: 56rem;
+    animation: quoteFade 0.9s ease-out;
+    animation-delay: 0.45s;
+    animation-fill-mode: both;
+  }
+  /* ============ TREASURE-MAP VOYAGE ============ */
+  .voyage-strip {
+    position: relative;
+    height: 180px;
+    border-radius: 6px;
+    /* aged parchment with warm browns and tan */
+    background:
+      radial-gradient(ellipse at 18% 30%, rgba(120,70,30,0.18) 0%, transparent 40%),
+      radial-gradient(ellipse at 82% 72%, rgba(140,80,40,0.16) 0%, transparent 45%),
+      radial-gradient(ellipse at 62% 18%, rgba(180,140,80,0.14) 0%, transparent 35%),
+      radial-gradient(circle at 30% 65%, rgba(90,55,25,0.12) 0%, transparent 28%),
+      linear-gradient(135deg, #e8d4a8 0%, #dec292 35%, #d1b27a 65%, #c4a36a 100%);
+    border: 1px solid rgba(95, 55, 20, 0.45);
+    box-shadow:
+      inset 0 0 30px rgba(110, 65, 25, 0.22),
+      inset 0 0 60px rgba(90, 50, 15, 0.18),
+      0 3px 8px rgba(0,0,0,0.35);
+    overflow: hidden;
+    padding: 0;
+  }
+  /* torn/burnt edge effect using overlayed gradients */
+  .voyage-strip::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at top left,    rgba(60,30,10,0.35) 0%, transparent 18%),
+      radial-gradient(ellipse at top right,   rgba(60,30,10,0.30) 0%, transparent 16%),
+      radial-gradient(ellipse at bottom left, rgba(60,30,10,0.32) 0%, transparent 17%),
+      radial-gradient(ellipse at bottom right,rgba(60,30,10,0.36) 0%, transparent 20%);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+  /* subtle fiber/grain texture */
+  .voyage-strip::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(37deg,  rgba(80,45,15,0.04) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(-42deg, rgba(80,45,15,0.035) 0 2px, transparent 2px 11px);
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  /* SVG carries only the curved path (dashed route + travelled overlay).
+     Ports + ship are DOM elements layered above — they stay true circles
+     even when the SVG is stretched non-uniformly. */
+  .voyage-map-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .voyage-route-path {
+    fill: none;
+    stroke: #5a2f12;
+    stroke-width: 2.2;
+    stroke-dasharray: 7 5;
+    stroke-linecap: round;
+    opacity: 0.72;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 1px 0 rgba(255,240,200,0.25));
+  }
+  .voyage-route-travelled {
+    fill: none;
+    stroke: #b85a1a;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 0 9999;
+    vector-effect: non-scaling-stroke;
+    transition: stroke-dasharray 1.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    filter: drop-shadow(0 0 3px rgba(184, 90, 26, 0.55));
+  }
+  /* DOM-layer container that holds ports + ship (positioned by % over SVG) */
+  .voyage-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  /* A single port marker (inked dot on parchment) */
+  .voyage-port {
+    position: absolute;
+    width: 12px; height: 12px;
+    margin-left: -6px; margin-top: -6px;
+    border-radius: 50%;
+    background: #f4e3b8;
+    border: 1.8px solid #5a2f12;
+    transition: background 0.4s, border-color 0.4s, transform 0.4s, box-shadow 0.4s;
+    transform: translate(0,0);
+  }
+  .voyage-port.visited {
+    background: #d67a1f;
+    border-color: #7a3e10;
+    box-shadow: 0 0 8px rgba(214, 122, 31, 0.7);
+  }
+  .voyage-port.current {
+    transform: scale(1.35);
+    box-shadow: 0 0 12px rgba(214, 122, 31, 0.9);
+  }
+  /* Port label (sits below/above its dot) */
+  .voyage-port-label {
+    position: absolute;
+    font-family: 'Fraunces', 'Playfair Display', serif;
+    font-size: 9px;
+    font-style: italic;
+    color: #4a2a0c;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.82;
+    pointer-events: none;
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+  /* Fixed start/end markers (pinned to path endpoints) */
+  .voyage-endpoint {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    text-align: center;
+    line-height: 1;
+  }
+  .voyage-endpoint.start  { left: 5.5%;  top: 75%;  color: #5a2f12; font-size: 15px; }
+  .voyage-endpoint.start::after  {
+    content: "HARBOR";
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    color: #4a2a0c;
+    margin-top: 4px;
+    opacity: 0.82;
+  }
+  .voyage-endpoint.x-mark { left: 94.5%; top: 39%;  }
+  .voyage-endpoint.x-mark .xmark-glyph {
+    font-family: 'Playfair Display', 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: #a63514;
+    filter: drop-shadow(0 0 4px rgba(166, 53, 20, 0.5));
+    animation: xMarkPulse 3.2s ease-in-out infinite;
+    display: block;
+  }
+  .voyage-endpoint.x-mark.claimed .xmark-glyph {
+    color: #d67a1f;
+    animation: xMarkPulse 2s ease-in-out infinite, xMarkClaim 1.4s ease-out;
+  }
+  .voyage-endpoint.x-mark::after {
+    content: "TREASURE";
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    color: #a63514;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  @keyframes xMarkPulse {
+    0%,100% { filter: drop-shadow(0 0 4px rgba(166, 53, 20, 0.5)); }
+    50%     { filter: drop-shadow(0 0 14px rgba(214, 122, 31, 0.95)); }
+  }
+  @keyframes xMarkClaim {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+  /* Compass rose (top-right corner) */
+  .voyage-compass {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    opacity: 0.78;
+    pointer-events: none;
+    z-index: 2;
+    animation: compassSpin 60s linear infinite;
+  }
+  .voyage-compass .compass-ring { fill: none; stroke: #5a2f12; stroke-width: 1.5; opacity: 0.85; }
+  .voyage-compass .compass-n    { fill: #a63514; }
+  .voyage-compass .compass-arm  { fill: #5a2f12; }
+  .voyage-compass .compass-letter { font-family: 'Fraunces', serif; font-size: 7px; fill: #4a2a0c; text-anchor: middle; font-weight: 700; }
+  @keyframes compassSpin {
+    from { transform: rotate(0); }
+    to   { transform: rotate(360deg); }
+  }
+  /* Sea monster decoration — bottom-left flourish */
+  .voyage-sea-flourish {
+    position: absolute;
+    bottom: 8px;
+    left: 12px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: #5a2f12;
+    opacity: 0.55;
+    letter-spacing: 0.08em;
+    pointer-events: none;
+    z-index: 2;
+  }
+  /* The ship — DOM element layered over the SVG, rotated to follow the curve */
+  .voyage-ship {
+    position: absolute;
+    left: 5%;
+    top: 75%;
+    width: 0; height: 0;
+    transition: left 1.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+                top  1.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: left, top;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .voyage-ship .ship-rotor {
+    position: absolute;
+    left: 0; top: 0;
+    transform: translate(-50%, -50%) rotate(0deg);
+    transition: transform 1.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+  }
+  .voyage-ship .ship-icon {
+    display: inline-block;
+    font-size: 22px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.45));
+    animation: shipBob 3.4s ease-in-out infinite;
+  }
+  .voyage-ship.arriving .ship-icon { animation: shipBob 3.4s ease-in-out infinite, shipArrive 1.4s ease-out; }
+  @keyframes shipBob {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-3px); }
+  }
+  @keyframes shipArrive {
+    0%   { filter: drop-shadow(0 0 0 rgba(214, 122, 31, 0)); }
+    40%  { filter: drop-shadow(0 0 18px rgba(214, 122, 31, 0.95)); }
+    100% { filter: drop-shadow(0 0 0 rgba(214, 122, 31, 0)); }
+  }
+  /* status line below the map */
+  .voyage-log {
+    margin-top: 0.55rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  .voyage-log .log-tag { color: var(--amber); }
+  .voyage-log .log-sep { margin: 0 0.6rem; color: rgba(232,180,94,0.3); }
+
+  @media (max-width: 640px) {
+    .voyage-strip { height: 150px; }
+    .voyage-port-label { font-size: 8px; }
+    .voyage-ship-g .ship-icon { font-size: 18px; }
+    .voyage-compass { width: 34px; height: 34px; top: 6px; right: 6px; }
+  }
+
+  /* ============ MOTIVATIONAL QUOTE BANNER (hero) ============ */
+  .quote-banner {
+    margin-top: 1.5rem;
+    padding: 0.6rem 2rem 0.6rem 0.95rem;
+    border-left: 2px solid var(--amber);
+    background: linear-gradient(90deg, rgba(232,180,94,0.06), rgba(232,180,94,0.01) 70%, transparent);
+    border-radius: 2px;
+    max-width: 40rem;
+    position: relative;
+    animation: quoteFade 0.9s ease-out;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.55rem;
+  }
+  .quote-banner .quote-text {
+    font-family: 'Fraunces', 'Figtree', serif;
+    font-style: italic;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--parchment);
+    letter-spacing: 0.003em;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .quote-banner .quote-text::before {
+    content: "“";
+    font-size: 1.3rem;
+    color: var(--amber);
+    margin-right: 0.15rem;
+    vertical-align: -0.25rem;
+    font-family: 'Fraunces', serif;
+    opacity: 0.8;
+  }
+  .quote-banner .quote-text::after {
+    content: "”";
+    font-size: 1.3rem;
+    color: var(--amber);
+    margin-left: 0.1rem;
+    vertical-align: -0.25rem;
+    font-family: 'Fraunces', serif;
+    opacity: 0.8;
+  }
+  .quote-banner .quote-author {
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .quote-banner .quote-author::before { content: "— "; color: var(--amber); opacity: 0.7; }
+  .quote-banner .quote-reroll {
+    position: absolute;
+    top: 50%;
+    right: 0.45rem;
+    transform: translateY(-50%);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(232,180,94,0.3);
+    background: transparent;
+    color: var(--amber);
+    font-size: 0.72rem;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s, transform 0.4s;
+    padding: 0;
+  }
+  .quote-banner .quote-reroll:hover { opacity: 1; transform: translateY(-50%) rotate(180deg); }
+  @keyframes quoteFade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 640px) {
+    .quote-banner { margin-top: 1.1rem; padding: 0.55rem 1.8rem 0.55rem 0.75rem; }
+    .quote-banner .quote-text { font-size: 0.85rem; }
+    .quote-banner .quote-author { font-size: 0.55rem; }
+  }
+
+  /* ============ CONQUEROR MODAL (all solved) ============ */
+  .conqueror-scrim {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(22,28,40,0.88), rgba(8,10,15,0.96));
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    animation: conqFade 0.6s ease-out;
+  }
+  .conqueror-scrim.open { display: flex; }
+  .conqueror-card {
+    max-width: 640px;
+    width: 100%;
+    padding: 3rem 2.5rem 2.2rem;
+    background: linear-gradient(160deg, #1a2030 0%, #13171f 100%);
+    border: 1px solid rgba(232,180,94,0.35);
+    border-radius: 4px;
+    box-shadow: 0 20px 80px -10px rgba(232,180,94,0.2), 0 0 0 1px rgba(232,180,94,0.05);
+    position: relative;
+    text-align: center;
+    animation: conqRise 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .conqueror-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 4px;
+    padding: 1px;
+    background: linear-gradient(135deg, transparent 30%, rgba(232,180,94,0.5) 50%, transparent 70%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    animation: conqShimmer 3.5s ease-in-out infinite;
+  }
+  .conqueror-crown {
+    font-size: 2.8rem;
+    margin-bottom: 0.3rem;
+    filter: drop-shadow(0 0 12px rgba(232,180,94,0.5));
+    animation: conqCrown 2.2s ease-in-out infinite;
+  }
+  .conqueror-title {
+    font-family: 'Playfair Display', 'Fraunces', serif;
+    font-size: 2.2rem;
+    letter-spacing: 0.02em;
+    color: var(--amber);
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+  }
+  .conqueror-sub {
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+  .conqueror-quote {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    line-height: 1.6;
+    color: var(--parchment);
+    margin: 0 auto 1.4rem;
+    max-width: 480px;
+  }
+  .conqueror-quote::before { content: "“"; color: var(--amber); font-size: 2rem; margin-right: 0.2rem; vertical-align: -0.3rem; }
+  .conqueror-quote::after  { content: "”"; color: var(--amber); font-size: 2rem; margin-left: 0.1rem;  vertical-align: -0.3rem; }
+  .conqueror-author {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 2.2rem;
+  }
+  .conqueror-author::before { content: "— "; opacity: 0.7; }
+  .conqueror-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-bottom: 1.8rem;
+    padding: 1.1rem 0;
+    border-top: 1px solid rgba(232,180,94,0.15);
+    border-bottom: 1px solid rgba(232,180,94,0.15);
+  }
+  .conqueror-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--amber);
+    line-height: 1;
+  }
+  .conqueror-stat-lbl {
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.35rem;
+  }
+  .conqueror-btn {
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 0.65rem 1.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .conqueror-btn:hover { background: var(--amber); color: var(--ink); }
+  .conqueror-close {
+    position: absolute;
+    top: 0.9rem; right: 1.1rem;
+    width: 28px; height: 28px;
+    background: transparent;
+    border: 1px solid rgba(232,180,94,0.25);
+    color: var(--muted);
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 1;
+    font-size: 1rem;
+  }
+  .conqueror-close:hover { color: var(--amber); border-color: var(--amber); }
+  @keyframes conqFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes conqRise { from { opacity: 0; transform: translateY(30px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes conqShimmer { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+  @keyframes conqCrown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @media (max-width: 640px) {
+    .conqueror-card { padding: 2rem 1.4rem 1.6rem; }
+    .conqueror-title { font-size: 1.7rem; }
+    .conqueror-quote { font-size: 1.05rem; }
+    .conqueror-stats { gap: 1.5rem; }
+    .conqueror-stat-val { font-size: 1.4rem; }
+  }
+
+  /* ============ UNIFIED VOYAGE MODAL — mode-based content visibility ============ */
+  /* The modal is re-used for welcome / daily-streak / broken-streak / conqueror /
+     manual — sections show or hide based on data-mode on the scrim. */
+  #voyageScrim .voyage-card {
+    max-width: 720px;
+    padding: 2.2rem 2.2rem 1.8rem;
+    text-align: center;
+  }
+  /* Default: everything hidden except the map + quote */
+  #voyageScrim .voyage-streak        { display: none; }
+  #voyageScrim .conqueror-stats      { display: none; }
+  #voyageScrim .voyage-name-capture  { display: none; }
+  #voyageScrim .voyage-captain-log   { display: none; }
+
+  /* Welcome — name input + quote + map, no streak, no stats. */
+  #voyageScrim[data-mode="welcome"] .voyage-name-capture { display: block; }
+
+  /* Daily (maintained or broken) — streak + quote + map */
+  #voyageScrim[data-mode="daily-maintained"] .voyage-streak { display: block; }
+  #voyageScrim[data-mode="daily-broken"]     .voyage-streak { display: block; }
+
+  /* Conqueror — voyage log + stats + map */
+  #voyageScrim[data-mode="conqueror"] .conqueror-stats    { display: flex; }
+  #voyageScrim[data-mode="conqueror"] .voyage-captain-log { display: block; }
+
+  /* Manual re-open — map only */
+  #voyageScrim[data-mode="manual"] .voyage-streak  { display: none; }
+  #voyageScrim[data-mode="manual"] .conqueror-stats { display: none; }
+
+  /* Per-mode crown color accents */
+  #voyageScrim[data-mode="daily-maintained"] .conqueror-crown { color: #e8b45e; }
+  #voyageScrim[data-mode="daily-broken"]     .conqueror-crown { filter: drop-shadow(0 0 12px rgba(166, 53, 20, 0.5)); }
+  #voyageScrim[data-mode="conqueror"]        .conqueror-crown { filter: drop-shadow(0 0 16px rgba(232, 180, 94, 0.7)); }
+
+  /* Streak display */
+  .voyage-streak {
+    margin: 0 auto 1.4rem;
+    padding: 1rem 1rem 0.9rem;
+    max-width: 320px;
+    border: 1px solid rgba(232, 180, 94, 0.2);
+    border-radius: 6px;
+    background: linear-gradient(160deg, rgba(232,180,94,0.05), transparent 70%);
+    position: relative;
+  }
+  .voyage-streak .streak-glyph {
+    font-size: 1.8rem;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    animation: streakFlame 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(255, 140, 40, 0.45));
+  }
+  #voyageScrim[data-mode="daily-broken"] .voyage-streak .streak-glyph {
+    animation: none;
+    filter: grayscale(0.6) brightness(0.85);
+    opacity: 0.7;
+  }
+  @keyframes streakFlame {
+    0%,100% { transform: scale(1) rotate(-2deg); }
+    50%     { transform: scale(1.08) rotate(2deg); }
+  }
+  .voyage-streak .streak-digits {
+    font-family: 'Playfair Display', 'Fraunces', serif;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--amber);
+    letter-spacing: 0.01em;
+  }
+  #voyageScrim[data-mode="daily-broken"] .voyage-streak .streak-digits {
+    color: #c9a572;
+    opacity: 0.85;
+  }
+  .voyage-streak .streak-lbl {
+    margin-top: 0.35rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .voyage-streak .streak-foot {
+    margin-top: 0.55rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-style: italic;
+    opacity: 0.88;
+  }
+
+  /* Captain-name capture (welcome mode) */
+  .voyage-name-capture {
+    margin: 0.2rem auto 1.6rem;
+    max-width: 420px;
+    text-align: center;
+  }
+  .voyage-name-capture .name-label {
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--parchment);
+    margin-bottom: 0.85rem;
+    opacity: 0.92;
+  }
+  .voyage-name-capture .name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(232, 180, 94, 0.32);
+    border-radius: 4px;
+    background: linear-gradient(160deg, rgba(232,180,94,0.08), rgba(232,180,94,0.02) 80%);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .voyage-name-capture .name-row:focus-within {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px rgba(232,180,94,0.25), 0 0 12px rgba(232,180,94,0.15);
+  }
+  .voyage-name-capture .name-prefix {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--amber);
+    letter-spacing: 0.02em;
+    flex: 0 0 auto;
+  }
+  .voyage-name-capture .name-input {
+    flex: 1 1 auto;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--parchment);
+    font-family: 'Playfair Display', 'Fraunces', serif;
+    font-size: 1.2rem;
+    font-style: italic;
+    letter-spacing: 0.01em;
+    text-align: left;
+    padding: 0.2rem 0.1rem;
+    min-width: 0;
+  }
+  .voyage-name-capture .name-input::placeholder {
+    color: var(--muted);
+    opacity: 0.6;
+    font-style: italic;
+  }
+  .voyage-name-capture .name-hint {
+    margin-top: 0.55rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-style: italic;
+    opacity: 0.8;
+  }
+  .voyage-name-capture.is-error .name-row {
+    border-color: #a63514;
+    box-shadow: 0 0 0 1px rgba(166, 53, 20, 0.35);
+  }
+  .voyage-name-capture.is-error .name-hint {
+    color: #d67a1f;
+    opacity: 1;
+  }
+
+  /* Voyage captain log (conqueror mode) — name + start/end dates + duration */
+  .voyage-captain-log {
+    margin: 0 auto 1.6rem;
+    max-width: 520px;
+    padding: 1.1rem 1.2rem 0.95rem;
+    border: 1px solid rgba(232,180,94,0.28);
+    border-radius: 4px;
+    background: linear-gradient(160deg, rgba(232,180,94,0.06), transparent 80%);
+    position: relative;
+  }
+  .voyage-captain-log::before,
+  .voyage-captain-log::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(232,180,94,0.45), transparent);
+  }
+  .voyage-captain-log::before { top: 0; }
+  .voyage-captain-log::after  { bottom: 0; }
+  .voyage-captain-log .log-row {
+    text-align: center;
+  }
+  .voyage-captain-log .log-captain {
+    margin-bottom: 0.95rem;
+    font-family: 'Playfair Display', 'Fraunces', serif;
+  }
+  .voyage-captain-log .log-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 0.7rem;
+    vertical-align: 0.2rem;
+  }
+  .voyage-captain-log .log-value {
+    font-size: 1.55rem;
+    font-style: italic;
+    color: var(--amber);
+    letter-spacing: 0.01em;
+  }
+  .voyage-captain-log .log-dates {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 0.85rem;
+  }
+  .voyage-captain-log .log-date-block { min-width: 0; text-align: center; }
+  .voyage-captain-log .log-date-lbl {
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+  .voyage-captain-log .log-date-val {
+    font-family: 'Fraunces', serif;
+    font-size: 0.95rem;
+    color: var(--parchment);
+    font-style: italic;
+  }
+  .voyage-captain-log .log-date-sep {
+    color: rgba(232,180,94,0.45);
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+  .voyage-captain-log .log-duration {
+    text-align: center;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--teal);
+    opacity: 0.92;
+  }
+  @media (max-width: 640px) {
+    .voyage-captain-log .log-dates { gap: 0.7rem; flex-wrap: wrap; }
+    .voyage-captain-log .log-value { font-size: 1.25rem; }
+  }
+
+  /* Treasure map inside modal — slightly smaller, same look */
+  .voyage-wrap-in-modal {
+    margin: 0.4rem auto 1.3rem;
+    max-width: 620px;
+  }
+  .voyage-wrap-in-modal .voyage-strip { height: 150px; }
+  .voyage-wrap-in-modal .voyage-log   { font-size: 0.58rem; letter-spacing: 0.18em; margin-top: 0.4rem; }
+
+  /* Modal quote — use conqueror-quote styling but smaller for welcome/daily */
+  #voyageScrim .conqueror-quote {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+  }
+  #voyageScrim[data-mode="conqueror"] .conqueror-quote {
+    font-size: 1.3rem;
+  }
+  #voyageScrim .conqueror-author {
+    margin-bottom: 1.2rem;
+  }
+  #voyageScrim[data-mode="conqueror"] .conqueror-author {
+    margin-bottom: 2.2rem;
+  }
+  #voyageScrim .conqueror-sub {
+    margin-bottom: 1.4rem;
+  }
+
+  /* Sidebar streak chip (always visible so users can track streak w/o popup) */
+  .streak-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.8rem 0.75rem 0;
+    padding: 0.4rem 0.7rem;
+    background: linear-gradient(90deg, rgba(232,180,94,0.12), transparent);
+    border: 1px solid rgba(232,180,94,0.18);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: var(--parchment);
+  }
+  .streak-chip .streak-chip-glyph {
+    font-size: 0.95rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 4px rgba(255, 140, 40, 0.4));
+  }
+  .streak-chip.cold .streak-chip-glyph { filter: grayscale(1); opacity: 0.5; }
+  .streak-chip .streak-chip-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
+  }
+  .streak-chip .streak-chip-lbl {
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* "Open voyage map" button in sidebar */
+  .voyage-open-btn {
+    width: 100%;
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    #voyageScrim .voyage-card { padding: 1.6rem 1rem 1.2rem; }
+    #voyageScrim .conqueror-title { font-size: 1.45rem; }
+    #voyageScrim .conqueror-sub   { font-size: 0.6rem; margin-bottom: 1rem; letter-spacing: 0.2em; }
+    #voyageScrim .conqueror-quote { font-size: 0.95rem; line-height: 1.5; }
+    #voyageScrim[data-mode="conqueror"] .conqueror-quote { font-size: 1.05rem; }
+    #voyageScrim .conqueror-crown { font-size: 2.1rem; margin-bottom: 0.2rem; }
+    .voyage-streak { padding: 0.8rem 0.8rem 0.7rem; max-width: 260px; }
+    .voyage-streak .streak-digits { font-size: 2.3rem; }
+    .voyage-streak .streak-glyph  { font-size: 1.5rem; }
+    .voyage-wrap-in-modal .voyage-strip { height: 130px; }
+    .voyage-wrap-in-modal .voyage-compass { width: 32px; height: 32px; top: 5px; right: 5px; }
+    .voyage-wrap-in-modal .voyage-sea-flourish { font-size: 8px; bottom: 4px; left: 6px; }
+    .voyage-wrap-in-modal .voyage-port-label { font-size: 7.5px; }
+    .voyage-wrap-in-modal .voyage-ship .ship-icon { font-size: 17px; }
+    .voyage-wrap-in-modal { margin-bottom: 1rem; }
+    /* Name input stays readable on narrow screens */
+    .voyage-name-capture { max-width: 100%; }
+    .voyage-name-capture .name-label  { font-size: 0.9rem; }
+    .voyage-name-capture .name-row    { padding: 0.45rem 0.6rem; gap: 0.4rem; }
+    .voyage-name-capture .name-prefix { font-size: 0.95rem; }
+    .voyage-name-capture .name-input  { font-size: 1rem; }
+    .voyage-name-capture .name-hint   { font-size: 0.65rem; }
+    /* Conqueror captain log — stack date blocks vertically if too narrow */
+    .voyage-captain-log { padding: 0.9rem 0.9rem 0.75rem; }
+    .voyage-captain-log .log-value { font-size: 1.2rem; }
+    .voyage-captain-log .log-badge { display: block; margin: 0 0 0.25rem; }
+    .voyage-captain-log .log-dates { gap: 0.6rem; flex-wrap: wrap; }
+    .voyage-captain-log .log-date-val { font-size: 0.85rem; }
+    .voyage-captain-log .log-duration { font-size: 0.6rem; letter-spacing: 0.18em; }
+  }
+
+  /* ============ RESET CONFIRMATION MODAL ============ */
+  .reset-scrim .reset-card {
+    max-width: 560px;
+    padding: 2rem 2rem 1.6rem;
+    text-align: left;
+    border: 1px solid rgba(166, 53, 20, 0.4);
+    box-shadow: 0 20px 80px -10px rgba(166, 53, 20, 0.25), 0 0 0 1px rgba(166, 53, 20, 0.08);
+  }
+  .reset-scrim .reset-card::before {
+    background: linear-gradient(135deg, transparent 30%, rgba(166, 53, 20, 0.45) 50%, transparent 70%);
+  }
+  .reset-scrim .reset-icon {
+    font-size: 2.2rem;
+    text-align: center;
+    margin-bottom: 0.4rem;
+    filter: drop-shadow(0 0 10px rgba(166, 53, 20, 0.45));
+    animation: conqCrown 2.4s ease-in-out infinite;
+  }
+  .reset-scrim .reset-title {
+    text-align: center;
+    color: #d67a1f;
+    font-size: 1.9rem;
+    margin-bottom: 0.3rem;
+  }
+  .reset-scrim .conqueror-sub {
+    text-align: center;
+    margin-bottom: 1.4rem;
+  }
+  .reset-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    border-top: 1px solid rgba(232, 180, 94, 0.12);
+    border-bottom: 1px solid rgba(232, 180, 94, 0.12);
+  }
+  .reset-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.6rem 0.2rem;
+    border-bottom: 1px dashed rgba(232, 180, 94, 0.09);
+  }
+  .reset-item:last-child { border-bottom: none; }
+  .reset-item .reset-ico {
+    font-size: 1.1rem;
+    line-height: 1.2;
+    flex: 0 0 1.8rem;
+    text-align: center;
+    opacity: 0.95;
+  }
+  .reset-item-body { flex: 1 1 auto; min-width: 0; }
+  .reset-item-title {
+    font-size: 0.88rem;
+    color: var(--parchment);
+    letter-spacing: 0.01em;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+  }
+  .reset-item-sub {
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .reset-item.is-preserved {
+    opacity: 0.85;
+  }
+  .reset-item.is-preserved .reset-ico { opacity: 0.75; }
+  .reset-item .reset-kept {
+    color: var(--teal);
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-left: 0.35rem;
+  }
+  .reset-warn {
+    text-align: center;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #d67a1f;
+    opacity: 0.9;
+    margin: 1rem 0 1.3rem;
+  }
+  .reset-cta-row {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .reset-btn {
+    flex: 1 1 auto;
+    background: transparent;
+    border: 1px solid rgba(232, 180, 94, 0.3);
+    color: var(--parchment);
+    padding: 0.65rem 1rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    font-family: inherit;
+  }
+  .reset-btn-cancel:hover { background: rgba(232, 180, 94, 0.08); color: var(--amber); border-color: var(--amber); }
+  .reset-btn-confirm {
+    background: rgba(166, 53, 20, 0.1);
+    color: #e08a3d;
+    border-color: rgba(166, 53, 20, 0.5);
+  }
+  .reset-btn-confirm:hover {
+    background: #a63514;
+    color: #fff;
+    border-color: #a63514;
+  }
+
+  @media (max-width: 640px) {
+    .reset-scrim .reset-card { padding: 1.6rem 1.1rem 1.3rem; }
+    .reset-scrim .reset-title { font-size: 1.5rem; }
+    .reset-scrim .conqueror-sub { font-size: 0.58rem; }
+    .reset-item { padding: 0.5rem 0.1rem; gap: 0.55rem; }
+    .reset-item .reset-ico { flex-basis: 1.5rem; font-size: 1rem; }
+    .reset-item-title { font-size: 0.82rem; }
+    .reset-item-sub   { font-size: 0.68rem; }
+    .reset-cta-row { flex-direction: column; }
+    .reset-btn { width: 100%; }
+    .reset-warn { font-size: 0.6rem; letter-spacing: 0.18em; margin: 0.8rem 0 1rem; }
+  }
+
+  /* ============ MOBILE VOYAGE FAB (floating action button) ============ */
+  .voyage-fab {
+    position: fixed;
+    right: 16px;
+    bottom: 18px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid rgba(232, 180, 94, 0.55);
+    background: linear-gradient(160deg, #1f2634 0%, #141821 100%);
+    color: var(--amber);
+    font-size: 1.5rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 900;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(232, 180, 94, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .voyage-fab:active { transform: scale(0.94); }
+  .voyage-fab .fab-glyph {
+    display: block;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
+  }
+  .voyage-fab .fab-streak {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #a63514;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.68rem;
+    line-height: 20px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(166, 53, 20, 0.6);
+    border: 1.5px solid #141821;
+  }
+  .voyage-fab .fab-streak.cold { background: #52463a; box-shadow: none; }
+  .voyage-fab.hidden-by-modal { display: none; }
+  /* Extra safety: if a modal is open, hide the FAB so it doesn't overlap. */
+  .conqueror-scrim.open ~ .voyage-fab { display: none; }
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
@@ -2119,9 +3125,219 @@ body.sandbox-open { overflow: hidden; }
       <span class="chip rust" title="Your query is scored against a gold query across multiple datasets — not just the visible example. A pass means your query handles ties, NULLs, and empty groups.">Hidden Edge-Case Validator</span>
       <span class="chip muted" title="⌘K opens the jump palette · ?j / ?k move between sections · / focuses the filter.">⌘K to search · ?j for next section</span>
     </div>
-    <div class="rule mt-14"></div>
+
+    <div class="rule mt-10"></div>
   </div>
 </header>
+
+<!-- ================= UNIFIED VOYAGE MODAL =================
+     Modes (set on #voyageScrim via data-mode):
+       welcome           — first-ever landing
+       daily-maintained  — once per day, streak intact
+       daily-broken      — once per day, streak reset
+       conqueror         — all problems + all MCQs done
+       manual            — user clicked the sidebar "Voyage" button
+============================================================= -->
+<div class="conqueror-scrim" id="voyageScrim" data-mode="welcome"
+     role="dialog" aria-modal="true" aria-labelledby="voyageTitle" aria-hidden="true">
+  <div class="conqueror-card voyage-card">
+    <button class="conqueror-close" id="voyageClose" type="button" aria-label="Close">✕</button>
+    <div class="conqueror-crown" id="voyageCrown">⚓</div>
+    <div class="conqueror-title" id="voyageTitle">Welcome Aboard, Captain</div>
+    <div class="conqueror-sub" id="voyageSub">Seven seas ahead · One wave at a time</div>
+
+    <!-- CAPTAIN-NAME CAPTURE (welcome mode only) -->
+    <div class="voyage-name-capture" id="voyageNameCapture">
+      <label class="name-label" for="captainNameInput">What shall we call you, Captain?</label>
+      <div class="name-row">
+        <span class="name-prefix">Captain</span>
+        <input class="name-input" id="captainNameInput" type="text"
+               maxlength="32" autocomplete="off" spellcheck="false"
+               placeholder="your name" />
+      </div>
+      <div class="name-hint" id="captainNameHint">The crew will need to know who's at the helm.</div>
+    </div>
+
+    <!-- STREAK (daily modes only) -->
+    <div class="voyage-streak" id="voyageStreak">
+      <div class="streak-glyph">🔥</div>
+      <div class="streak-digits"><span id="streakNum">0</span></div>
+      <div class="streak-lbl"><span id="streakLbl">Day Streak</span></div>
+      <div class="streak-foot" id="streakFoot">Best: 0 · You've visited before, Captain.</div>
+    </div>
+
+    <!-- VOYAGE LOG (conqueror mode only) — captain's name + dates + duration -->
+    <div class="voyage-captain-log" id="voyageCaptainLog">
+      <div class="log-row log-captain">
+        <span class="log-badge">Captain</span>
+        <span class="log-value" id="conqCaptainName">—</span>
+      </div>
+      <div class="log-row log-dates">
+        <div class="log-date-block">
+          <div class="log-date-lbl">Set Sail</div>
+          <div class="log-date-val" id="conqDateStart">—</div>
+        </div>
+        <div class="log-date-sep">◆</div>
+        <div class="log-date-block">
+          <div class="log-date-lbl">Treasure Claimed</div>
+          <div class="log-date-val" id="conqDateEnd">—</div>
+        </div>
+      </div>
+      <div class="log-duration" id="conqDuration">—</div>
+    </div>
+
+    <!-- QUOTE -->
+    <div class="conqueror-quote" id="voyageQuote"></div>
+    <div class="conqueror-author" id="voyageAuthor"></div>
+
+    <!-- TREASURE MAP (embedded) -->
+    <div class="voyage-wrap voyage-wrap-in-modal" aria-label="Voyage progress">
+      <div class="voyage-strip" role="img" aria-label="Treasure map with ship sailing the seven seas">
+        <svg class="voyage-compass" viewBox="0 0 44 44" aria-hidden="true">
+          <circle class="compass-ring" cx="22" cy="22" r="19"/>
+          <circle class="compass-ring" cx="22" cy="22" r="14"/>
+          <polygon class="compass-n"   points="22,4 25,22 22,21 19,22"/>
+          <polygon class="compass-arm" points="22,40 19,22 22,23 25,22"/>
+          <polygon class="compass-arm" points="4,22 22,19 21,22 22,25"/>
+          <polygon class="compass-arm" points="40,22 22,25 23,22 22,19"/>
+          <text class="compass-letter" x="22" y="12">N</text>
+        </svg>
+        <div class="voyage-sea-flourish" aria-hidden="true">Here be the Seven Seas</div>
+
+        <svg class="voyage-map-svg" id="voyageMapSvg"
+             viewBox="0 0 1000 180" preserveAspectRatio="none"
+             aria-hidden="true">
+          <defs>
+            <path id="treasureRoute"
+                  d="M 55 135 C 145 85, 215 165, 300 110 S 440 55, 515 130 S 660 170, 755 85 S 880 35, 945 70" />
+          </defs>
+          <use href="#treasureRoute" class="voyage-route-path"/>
+          <use href="#treasureRoute" class="voyage-route-travelled" id="voyageTravelled"/>
+        </svg>
+
+        <div class="voyage-overlay">
+          <div class="voyage-endpoint start" aria-label="Harbor · departure">⚓</div>
+          <div id="voyagePorts">
+            <div class="voyage-port" data-phase="0"></div><div class="voyage-port-label" data-phase="0">MENTAL</div>
+            <div class="voyage-port" data-phase="1"></div><div class="voyage-port-label" data-phase="1">SCHEMA</div>
+            <div class="voyage-port" data-phase="2"></div><div class="voyage-port-label" data-phase="2">CORE</div>
+            <div class="voyage-port" data-phase="3"></div><div class="voyage-port-label" data-phase="3">WINDOWS</div>
+            <div class="voyage-port" data-phase="4"></div><div class="voyage-port-label" data-phase="4">ADVANCED</div>
+            <div class="voyage-port" data-phase="5"></div><div class="voyage-port-label" data-phase="5">TYPES</div>
+            <div class="voyage-port" data-phase="6"></div><div class="voyage-port-label" data-phase="6">PERF</div>
+          </div>
+          <div class="voyage-endpoint x-mark" id="voyageXMark" aria-label="Final port · treasure">
+            <span class="xmark-glyph">✕</span>
+          </div>
+          <div class="voyage-ship" id="voyageShip" aria-live="polite">
+            <div class="ship-rotor"><span class="ship-icon">⛵</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="voyage-log">
+        <span class="log-tag">Captain's log</span>
+        <span class="log-sep">·</span>
+        <span id="voyageLog">Weighing anchor — departure harbor</span>
+      </div>
+    </div>
+
+    <!-- STATS (conqueror mode only) -->
+    <div class="conqueror-stats" id="voyageStats">
+      <div>
+        <div class="conqueror-stat-val" id="conqStatProblems">0</div>
+        <div class="conqueror-stat-lbl">Problems</div>
+      </div>
+      <div>
+        <div class="conqueror-stat-val" id="conqStatMcqs">0</div>
+        <div class="conqueror-stat-lbl">MCQs</div>
+      </div>
+      <div>
+        <div class="conqueror-stat-val">🏴‍☠️</div>
+        <div class="conqueror-stat-lbl">Colours Raised</div>
+      </div>
+    </div>
+
+    <button class="conqueror-btn" id="voyageBtn" type="button">Set sail</button>
+  </div>
+</div>
+
+<!-- ================= RESET CONFIRMATION MODAL ================= -->
+<div class="conqueror-scrim reset-scrim" id="resetScrim"
+     role="dialog" aria-modal="true" aria-labelledby="resetTitle" aria-hidden="true">
+  <div class="conqueror-card reset-card">
+    <button class="conqueror-close" id="resetCloseBtn" type="button" aria-label="Close">✕</button>
+    <div class="reset-icon" aria-hidden="true">⚠️</div>
+    <div class="conqueror-title reset-title" id="resetTitle">Scuttle the Ship?</div>
+    <div class="conqueror-sub">This voyage will be reset — the ocean will forget you, Captain.</div>
+
+    <ul class="reset-checklist" aria-label="Everything that will be cleared">
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">🧭</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Captain's name</div>
+          <div class="reset-item-sub">You'll be prompted to name your captain again on the next sail.</div>
+        </div>
+      </li>
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">🏴‍☠️</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Voyage dates &amp; conqueror status</div>
+          <div class="reset-item-sub">Set-sail date, treasure-claimed date, and the <em>Captain of the Atlas</em> flag.</div>
+        </div>
+      </li>
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">🔥</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Daily-visit streak</div>
+          <div class="reset-item-sub">Current streak and your all-time best streak.</div>
+        </div>
+      </li>
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">✅</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Every solved problem</div>
+          <div class="reset-item-sub">All passed / attempted markers across the 58 practice problems.</div>
+        </div>
+      </li>
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">🎯</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Every MCQ answer</div>
+          <div class="reset-item-sub">All quiz picks and correctness records will be wiped.</div>
+        </div>
+      </li>
+      <li class="reset-item">
+        <span class="reset-ico" aria-hidden="true">📍</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Resume &amp; open-section state</div>
+          <div class="reset-item-sub">Where you last were, which sections were expanded.</div>
+        </div>
+      </li>
+      <li class="reset-item is-preserved">
+        <span class="reset-ico" aria-hidden="true">★</span>
+        <div class="reset-item-body">
+          <div class="reset-item-title">Starred sections <span class="reset-kept">— kept</span></div>
+          <div class="reset-item-sub">Your favorite sections will <strong>stay starred</strong>.</div>
+        </div>
+      </li>
+    </ul>
+
+    <div class="reset-warn">This cannot be undone, Captain. The crew is watching.</div>
+
+    <div class="reset-cta-row">
+      <button class="reset-btn reset-btn-cancel" id="resetCancel" type="button">Belay that — keep sailing</button>
+      <button class="reset-btn reset-btn-confirm" id="resetConfirm" type="button">Scuttle the ship</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile floating action button — opens the voyage map when the sidebar
+     button is hidden (md-below). -->
+<button id="voyageFab" class="voyage-fab md:hidden" type="button"
+        aria-label="Open voyage map">
+  <span class="fab-glyph">⛵</span>
+  <span class="fab-streak" id="fabStreak" aria-hidden="true">0</span>
+</button>
 
 <!-- ================= MAIN LAYOUT ================= -->
 <main class="max-w-6xl mx-auto px-6 pb-20 grid md:grid-cols-[240px_1fr] gap-10 relative">
@@ -2145,6 +3361,16 @@ body.sandbox-open { overflow: hidden; }
       <div class="flex items-center gap-2 px-3 mt-2 text-xs text-[color:var(--muted)]" title="Multiple-choice quiz questions answered correctly across the guide. Tracked separately from problems.">
         <span class="chip muted" id="quizProgChip">0 / 0 MCQ</span>
         <span>correct</span>
+      </div>
+
+      <div class="streak-chip" id="streakSidebarChip" title="Daily-visit streak. Come back tomorrow to extend it.">
+        <span class="streak-chip-glyph">🔥</span>
+        <span class="streak-chip-val" id="streakSidebarVal">0</span>
+        <span class="streak-chip-lbl">Day Streak</span>
+      </div>
+
+      <div class="flex px-3 mt-3">
+        <button id="openVoyage" class="facet voyage-open-btn" title="Open the voyage map">⛵ Voyage Map</button>
       </div>
 
       <div class="flex gap-2 px-3 mt-3">
@@ -3082,6 +4308,158 @@ function updateProgress() {
   }
   const landingQuiz = document.getElementById("chipQuizzes");
   if (landingQuiz) landingQuiz.textContent = `${qTotal} Quizzes`;
+
+  // --- VOYAGE MAP (captain sails as problems get solved) --------------
+  // Cache progress numbers so the voyage modal can re-paint the map without
+  // re-running this whole pipeline when it's opened manually.
+  _lastProgress = { total: uniq.length, solved, qTotal, qCorrect };
+  updateVoyage(uniq.length, solved);
+  // Keep the sidebar streak chip fresh (storage can change from other tabs).
+  paintSidebarStreak();
+
+  // Mastery check — fires the conqueror modal on the first paint where
+  // every problem is passed AND every MCQ answered correctly.
+  checkConqueror(uniq.length, solved, qTotal, qCorrect);
+}
+
+/* =====================================================================
+   VOYAGE MAP — positions the ship along the horizon based on progress
+   and lights up ports as they are reached.
+   ===================================================================== */
+const PHASE_LABELS = [
+  { short: "Mental Model",        long: "Phase 0 — The Mental Model" },
+  { short: "Schema",              long: "Phase 1 — Schema & Data Modeling" },
+  { short: "Core Query Patterns", long: "Phase 2 — Core Query Patterns" },
+  { short: "Windows",             long: "Phase 3 — Window Functions & Aggregation" },
+  { short: "Advanced Patterns",   long: "Phase 4 — Advanced Patterns" },
+  { short: "Data Types",          long: "Phase 5 — Data Type Manipulation" },
+  { short: "Performance",         long: "Phase 6 — Performance & DML" },
+];
+
+let _voyageLastPhase = -1;
+let _voyagePortsPlaced = false;
+
+// SVG viewBox dimensions — must match the <svg viewBox="0 0 1000 180">.
+// Points from getPointAtLength come back in this coordinate space, which we
+// then convert to container percentages (the SVG stretches to fill).
+const _VB_W = 1000, _VB_H = 180;
+
+/* Place the 7 phase ports + labels at percentage positions along the curve. */
+function placeVoyagePorts() {
+  const path = document.getElementById("treasureRoute");
+  if (!path || _voyagePortsPlaced) return;
+  const totalLen = path.getTotalLength();
+  if (!totalLen) return;
+  const ports  = document.querySelectorAll('#voyagePorts .voyage-port');
+  const labels = document.querySelectorAll('#voyagePorts .voyage-port-label');
+  ports.forEach((port, i) => {
+    const frac = (i + 1) / 8;
+    const pt = path.getPointAtLength(totalLen * frac);
+    const xPct = (pt.x / _VB_W) * 100;
+    const yPct = (pt.y / _VB_H) * 100;
+    port.style.left = xPct + "%";
+    port.style.top  = yPct + "%";
+    const lbl = labels[i];
+    if (lbl) {
+      const below = pt.y < _VB_H / 2;
+      // Label above the port on top half of curve, below on bottom half,
+      // offset by ~14% of strip height so it's readable.
+      const labelYPct = below ? yPct - 10 : yPct + 11;
+      lbl.style.left = xPct + "%";
+      lbl.style.top  = labelYPct + "%";
+    }
+  });
+  _voyagePortsPlaced = true;
+}
+
+function updateVoyage(totalProblems, solvedProblems) {
+  const path = document.getElementById("treasureRoute");
+  const ship = document.getElementById("voyageShip");
+  const travelled = document.getElementById("voyageTravelled");
+  const xMark = document.getElementById("voyageXMark");
+  const log  = document.getElementById("voyageLog");
+  const ports = document.querySelectorAll('#voyagePorts .voyage-port');
+  if (!path || !ship || !travelled || !log || !ports.length) return;
+
+  if (!_voyagePortsPlaced) placeVoyagePorts();
+
+  const totalLen = path.getTotalLength();
+  if (!totalLen) return;
+
+  const pct = totalProblems > 0 ? solvedProblems / totalProblems : 0;
+  const clamped = Math.max(0, Math.min(1, pct));
+
+  // Ship position along the curve in viewBox coords, converted to %.
+  const shipLen = totalLen * clamped;
+  const shipPt = path.getPointAtLength(shipLen);
+  const xPct = (shipPt.x / _VB_W) * 100;
+  const yPct = (shipPt.y / _VB_H) * 100;
+  ship.style.left = xPct + "%";
+  ship.style.top  = yPct + "%";
+
+  // Tangent rotation — sample a nearby point on the path.
+  const aheadLen = Math.min(totalLen, shipLen + 2);
+  const aheadPt = path.getPointAtLength(aheadLen);
+  // Important: SVG is stretched non-uniformly via preserveAspectRatio="none",
+  // so we scale the tangent's dx/dy by the actual rendered stretch before
+  // computing atan2 — that way the ship visually points along the drawn curve
+  // rather than along the un-stretched viewBox curve.
+  const stripEl = document.querySelector(".voyage-strip");
+  let sx = 1, sy = 1;
+  if (stripEl) {
+    const r = stripEl.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      sx = r.width / _VB_W;
+      sy = r.height / _VB_H;
+    }
+  }
+  const dx = (aheadPt.x - shipPt.x) * sx;
+  const dy = (aheadPt.y - shipPt.y) * sy;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const rotor = ship.querySelector(".ship-rotor");
+  if (rotor) rotor.style.transform = `translate(-50%, -50%) rotate(${angle.toFixed(2)}deg)`;
+
+  // Travelled portion of the route — grow the amber stroke.
+  travelled.style.strokeDasharray = `${shipLen} ${totalLen - shipLen + 1}`;
+
+  // Ports light up as the ship passes each one (port i at fraction (i+1)/8).
+  ports.forEach((p, i) => {
+    const threshold = (i + 1) / 8;
+    p.classList.toggle("visited", clamped >= threshold - 0.001);
+  });
+
+  // Current-phase highlight — the next port the ship is sailing toward.
+  const currentPhase = Math.min(6, Math.floor(clamped * 7));
+  ports.forEach((p) => p.classList.remove("current"));
+  const curPort = ports[currentPhase];
+  if (curPort && clamped < 0.999) curPort.classList.add("current");
+
+  // X-marks-the-spot lights up only at full mastery.
+  if (xMark) xMark.classList.toggle("claimed", clamped >= 0.999);
+
+  // Fire the "arriving" pulse whenever the captain crosses into a new phase.
+  if (currentPhase !== _voyageLastPhase && _voyageLastPhase !== -1) {
+    ship.classList.remove("arriving");
+    void ship.getBoundingClientRect();
+    ship.classList.add("arriving");
+    setTimeout(() => ship.classList.remove("arriving"), 1500);
+  }
+  _voyageLastPhase = currentPhase;
+
+  // Captain's log line — describes the voyage state in plain language.
+  let logMsg;
+  if (totalProblems === 0) {
+    logMsg = "Weighing anchor — departure harbor";
+  } else if (clamped <= 0.001) {
+    logMsg = `Casting off from harbor — bound for ${PHASE_LABELS[0].long}`;
+  } else if (clamped >= 0.999) {
+    logMsg = `Arrived at the final port — Captain of the Atlas`;
+  } else {
+    const phaseLabel = PHASE_LABELS[currentPhase].long;
+    const leg = Math.round((clamped * 7 - currentPhase) * 100);
+    logMsg = `Sailing ${phaseLabel} — ${leg}% through this leg · ${solvedProblems}/${totalProblems} total`;
+  }
+  log.textContent = logMsg;
 }
 
 /* =====================================================================
@@ -3094,12 +4472,472 @@ function onScroll() {
 }
 window.addEventListener("scroll", onScroll, { passive: true });
 
+// Re-place the treasure-map ports + re-compute ship tangent on window resize.
+// (SVG stretches to container width so the rendered curve changes shape.)
+let _voyageResizeRaf = 0;
+window.addEventListener("resize", () => {
+  if (_voyageResizeRaf) cancelAnimationFrame(_voyageResizeRaf);
+  _voyageResizeRaf = requestAnimationFrame(() => {
+    _voyagePortsPlaced = false;
+    placeVoyagePorts();
+    updateProgress();
+  });
+});
+
 // Live-refresh quiz chips + header counter whenever a quiz is answered/reset.
 document.addEventListener("atlas:quiz-answered", () => {
   const nodes = $$("#guide details");
   computeAndPaintMeta(nodes.filter(n => n.dataset.title));
   updateProgress();
 });
+
+/* =====================================================================
+   QUOTE POOLS — one pool per modal mode.
+   Each quote: { t: text, a: author-in-small-caps }.
+   ===================================================================== */
+
+// Shown ONCE on first-ever landing (or after a full Reset). Big,
+// beginner-friendly, anchor-weigh energy.
+const WELCOME_QUOTES = [
+  { t: "Welcome aboard, Captain. Seven seas lie ahead — and you have a map, a compass, and all the time in the world to sail them. Take the helm.",
+    a: "First Entry · Captain's Log" },
+  { t: "Every great captain stood on this deck for the first time once. Today, that captain is you. Cast off.",
+    a: "First Entry · Captain's Log" },
+  { t: "You don't need to capture the seven seas today. You need to raise the first sail. The rest will follow, one wave at a time.",
+    a: "Navigator's Creed" },
+  { t: "Somewhere past the seventh sea there is a query you cannot yet write. By the time you get there, it will feel small. Start here.",
+    a: "First Entry · Captain's Log" },
+  { t: "The Atlas has been charted for you. Your only job is to sail — and return tomorrow. That is how captains are made.",
+    a: "Old Pilot's Rhyme" },
+];
+
+// Shown when the user opens the Atlas for the first time today AND their
+// streak is intact (last visit was yesterday). Praise consistency.
+const STREAK_QUOTES = [
+  { t: "The crew sees you return, Captain — and the sails rise again. That is what a voyage is made of.",
+    a: "Captain's Log" },
+  { t: "Day by day you close on the treasure. Consistency is a stronger wind than talent.",
+    a: "Navigator's Creed" },
+  { t: "You came back. The compass steadies when you do. The seven seas cannot resist a captain who returns.",
+    a: "Captain's Log" },
+  { t: "Another day, another wave claimed. The Atlas fills its map with every captain who keeps their word.",
+    a: "Old Pilot's Rhyme" },
+  { t: "The crew cheered when they saw your lantern on the horizon. Good captains come back — and you did.",
+    a: "Captain's Log" },
+  { t: "Every day you sail, the seven seas grow kinder. You're not learning SQL anymore — you're becoming someone who knows it.",
+    a: "Pirate's Proverb" },
+  { t: "Consistency is the true treasure. The one you're carrying back to shore right now.",
+    a: "Shipwright's Wisdom" },
+  { t: "Another port in the ship's log. The ocean notices, Captain. So does the crew. So do you.",
+    a: "Captain's Log" },
+];
+
+// Shown when the user returns after missing ≥ 1 day. Warm, not scolding —
+// "the crew was clueless without you" energy. Invite them back to the wheel.
+const BROKEN_QUOTES = [
+  { t: "The crew was clueless without you, Captain. The sails slackened. The compass spun. Take the wheel — and let us sail again.",
+    a: "First Mate's Log" },
+  { t: "The ship drifted a little while you were ashore. No harm done — captains come home. Your map is waiting exactly where you left it.",
+    a: "Navigator's Creed" },
+  { t: "The horizon did not move. The treasure did not sail. Only you stepped off the deck — and here you are again. Welcome back.",
+    a: "Captain's Log" },
+  { t: "A broken streak is not a shipwreck, Captain. It's a port you visited. Untie the ropes and let us sail for the next sea.",
+    a: "Old Pilot's Rhyme" },
+  { t: "The crew stopped asking 'where is the captain?' the moment they saw you climb aboard. Chart the next course.",
+    a: "First Mate's Log" },
+  { t: "The seas missed you. The seven phases missed you. Your hands on this wheel are what made this a voyage. Now — raise the sails.",
+    a: "Captain's Log" },
+  { t: "Gone a day or gone a week — the Atlas is patient. It remembers every wave you sailed. Pick up where you left off.",
+    a: "Shipwright's Wisdom" },
+  { t: "Without the captain, the sails are just canvas. You're back. That's all the crew needed to hear.",
+    a: "First Mate's Log" },
+];
+
+// Shown when every problem is solved AND every MCQ is correct.
+const CONQUEROR_QUOTES = [
+  { t: "You have charted every sea of SQL. The Atlas has no more maps to give you — you are the cartographer now.",
+    a: "Captain's Last Entry" },
+  { t: "Every port crossed. Every storm weathered. Every NULL shoal avoided. The horizon belongs to you.",
+    a: "Captain's Last Entry" },
+  { t: "You began this voyage a deckhand. You finish it with a steady compass, a full chart, and a crew who asks you for the plan.",
+    a: "Captain's Last Entry" },
+  { t: "The treasure was never in the SELECT. It was in the queries you had the courage to write. And write again.",
+    a: "Pirate's Last Entry" },
+  { t: "Seven phases, seven seas. The Atlas has been conquered. The captain has been forged.",
+    a: "Captain's Last Entry" },
+  { t: "You stand at the final port. Behind you: every pattern. Ahead: every interview you ever feared, now smaller than this deck.",
+    a: "Captain's Last Entry" },
+  { t: "The Jolly Roger flies for you tonight. You did not learn SQL — you mastered its seas.",
+    a: "Pirate's Last Entry" },
+];
+
+function pickFrom(pool) {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* =====================================================================
+   STREAK ENGINE — tracks daily-visit streaks in localStorage and decides
+   which modal to show on page load.
+   ===================================================================== */
+const LS_LAST_VISIT  = "atlas.lastVisitDate";   // "YYYY-MM-DD"
+const LS_STREAK      = "atlas.streak";          // integer
+const LS_BEST        = "atlas.bestStreak";      // integer
+const LS_WELCOMED    = "atlas.welcomed";        // "1" once welcome shown
+const LS_CONQ_SEEN   = "atlas.conquerorSeen";   // "1" once conqueror shown
+const LS_CAPTAIN     = "atlas.captainName";     // captain's display name
+const LS_VOYAGE_START= "atlas.voyageStart";     // ISO date when welcome committed
+const LS_VOYAGE_END  = "atlas.voyageEnd";       // ISO date when conqueror earned
+const LS_DAILY_QUOTE = "atlas.dailyQuote";      // JSON: {date,mode,t,a} — replayed in manual mode
+
+/* Persist the quote picked for today's first-visit modal so re-opening the
+   voyage map later the same day shows the same line instead of a new random
+   one. Stored as `{ date: "YYYY-MM-DD", mode, t, a }`. */
+function saveDailyQuote(mode, quote) {
+  try {
+    localStorage.setItem(LS_DAILY_QUOTE, JSON.stringify({
+      date: _todayKey(), mode, t: quote.t || "", a: quote.a || ""
+    }));
+  } catch (_) {}
+}
+/* Read today's stored quote, or null if none / stale (different date). */
+function loadDailyQuote() {
+  try {
+    const raw = localStorage.getItem(LS_DAILY_QUOTE);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || obj.date !== _todayKey()) return null;
+    return obj;
+  } catch (_) { return null; }
+}
+
+function getCaptainName() {
+  try { return (localStorage.getItem(LS_CAPTAIN) || "").trim(); } catch (_) { return ""; }
+}
+function setCaptainName(name) {
+  try { localStorage.setItem(LS_CAPTAIN, String(name).trim()); } catch (_) {}
+}
+/* Format "Captain {Name}" when we have a name, else just "Captain". */
+function captainAddress() {
+  const n = getCaptainName();
+  return n ? `Captain ${n}` : "Captain";
+}
+/* Human-readable date like "25 Apr 2026". Stable across locales. */
+function formatVoyageDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+  return `${d.getDate()} ${mon} ${d.getFullYear()}`;
+}
+/* Inclusive day count between two ISO dates (both as YYYY-MM-DD). */
+function voyageDurationDays(startIso, endIso) {
+  if (!startIso || !endIso) return 0;
+  const s = new Date(startIso + "T00:00:00").getTime();
+  const e = new Date(endIso   + "T00:00:00").getTime();
+  if (isNaN(s) || isNaN(e)) return 0;
+  return Math.max(1, Math.round((e - s) / 86400000) + 1);
+}
+
+function _todayKey(d = new Date()) {
+  // Local-date YYYY-MM-DD so travel/timezones don't break the streak.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function _yesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return _todayKey(d);
+}
+
+/*  Returns an object describing what popup (if any) should show on landing:
+ *    { mode: 'welcome' | 'daily-maintained' | 'daily-broken' | 'none',
+ *      streak: <int>, best: <int>, prevStreak?: <int>, today: 'YYYY-MM-DD' }
+ */
+function computeStreakState() {
+  const today = _todayKey();
+  let last, streak, best, welcomed;
+  try {
+    last     = localStorage.getItem(LS_LAST_VISIT);
+    streak   = parseInt(localStorage.getItem(LS_STREAK) || "0", 10) || 0;
+    best     = parseInt(localStorage.getItem(LS_BEST)   || "0", 10) || 0;
+    welcomed = localStorage.getItem(LS_WELCOMED) === "1";
+  } catch (_) {
+    last = null; streak = 0; best = 0; welcomed = false;
+  }
+  // First-ever landing (or reset).
+  if (!welcomed || !last) {
+    return { mode: "welcome", streak: 0, best, today };
+  }
+  // Already opened today — nothing to do.
+  if (last === today) {
+    return { mode: "none", streak, best, today };
+  }
+  // Came back yesterday → streak maintained (+1).
+  if (last === _yesterdayKey()) {
+    const next = streak + 1;
+    return { mode: "daily-maintained", streak: next, best: Math.max(best, next), today, prevStreak: streak };
+  }
+  // Gap > 1 day → streak reset to 1. Remember the old streak for the modal text.
+  return { mode: "daily-broken", streak: 1, best, today, prevStreak: streak };
+}
+
+/*  Commit the computed state to localStorage. Call after the popup decision
+ *  so the state is saved even if the user closes the modal immediately. */
+function commitVisit(state) {
+  try {
+    localStorage.setItem(LS_LAST_VISIT, state.today);
+    localStorage.setItem(LS_STREAK, String(state.streak));
+    localStorage.setItem(LS_BEST,   String(state.best));
+    if (state.mode === "welcome") {
+      localStorage.setItem(LS_WELCOMED, "1");
+      // Stamp the voyage start date once, on first welcome landing.
+      if (!localStorage.getItem(LS_VOYAGE_START)) {
+        localStorage.setItem(LS_VOYAGE_START, state.today);
+      }
+    }
+  } catch (_) {}
+}
+
+/* =====================================================================
+   UNIFIED VOYAGE MODAL — one modal, four modes (welcome, daily-maintained,
+   daily-broken, conqueror) + one "manual" re-open mode.
+   ===================================================================== */
+function _setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+/*  Animate the big streak digit from 0 → target like a counter ticking. */
+function _tickStreakNumber(target) {
+  const el = document.getElementById("streakNum");
+  if (!el) return;
+  const dur = Math.min(1400, 350 + target * 120); // faster for big streaks
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / dur);
+    // ease-out-cubic
+    const e = 1 - Math.pow(1 - t, 3);
+    el.textContent = String(Math.round(target * e));
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = String(target);
+  }
+  el.textContent = "0";
+  requestAnimationFrame(step);
+}
+
+/*  Render the modal in the given mode.
+ *    mode: 'welcome' | 'daily-maintained' | 'daily-broken' | 'conqueror' | 'manual'
+ *    ctx:  { streak, best, prevStreak, problemTotal, quizTotal }  (mode-specific) */
+function openVoyageModal(mode, ctx = {}) {
+  const scrim = document.getElementById("voyageScrim");
+  if (!scrim || scrim.classList.contains("open")) return;
+  scrim.setAttribute("data-mode", mode);
+
+  // Captain address — falls back to bare "Captain" until a name is entered.
+  const addr = captainAddress();
+  const name = getCaptainName();
+
+  // Title / subtitle / crown / CTA / quote pool per mode.
+  let crown = "⚓", title = `Welcome Aboard, ${addr}`,
+      sub   = "Seven seas ahead · One wave at a time",
+      cta   = "Set sail",
+      quote = pickFrom(WELCOME_QUOTES);
+
+  if (mode === "daily-maintained") {
+    crown = "🔥";
+    title = `You Came Back, ${addr}`;
+    sub   = `Day ${ctx.streak} of the voyage · Streak intact`;
+    cta   = name ? `Back to the helm, ${name}` : "Back to the helm";
+    quote = pickFrom(STREAK_QUOTES);
+  } else if (mode === "daily-broken") {
+    crown = "🏴‍☠️";
+    title = `${addr} on Deck`;
+    sub   = ctx.prevStreak > 1
+      ? `The ${ctx.prevStreak}-day streak broke · Starting a new one at Day 1`
+      : `A new voyage begins · Day 1`;
+    cta   = "Take the wheel";
+    quote = pickFrom(BROKEN_QUOTES);
+  } else if (mode === "conqueror") {
+    crown = "👑";
+    title = name ? `${name}, Captain of the Atlas` : "Captain of the Atlas";
+    sub   = "All seven seas charted · Every port anchored";
+    cta   = "Hoist the Jolly Roger";
+    quote = pickFrom(CONQUEROR_QUOTES);
+  } else if (mode === "manual") {
+    crown = "⛵";
+    title = name ? `${name}'s Voyage So Far` : "Your Voyage So Far";
+    sub   = "The seven seas, charted by your progress";
+    cta   = "Close";
+    // Manual re-open — replay the quote picked earlier today. If nothing's
+    // stored yet (user clicked the map before the daily popup fired, or the
+    // store got wiped), pick one now based on current streak state and save
+    // it so the rest of the day is consistent.
+    const stored = loadDailyQuote();
+    if (stored && (stored.t || stored.a)) {
+      quote = { t: stored.t, a: stored.a };
+    } else {
+      let pool = WELCOME_QUOTES;
+      try {
+        const s = parseInt(localStorage.getItem(LS_STREAK) || "0", 10) || 0;
+        const last = localStorage.getItem(LS_LAST_VISIT);
+        const today = _todayKey();
+        const yest  = _yesterdayKey();
+        if (localStorage.getItem(LS_CONQ_SEEN) === "1") pool = CONQUEROR_QUOTES;
+        else if (last === today && s > 1) pool = STREAK_QUOTES;
+        else if (last && last !== today && last !== yest) pool = BROKEN_QUOTES;
+      } catch (_) {}
+      quote = pickFrom(pool);
+      saveDailyQuote("manual", quote);
+    }
+  }
+
+  // For first-of-day modes (welcome / daily-maintained / daily-broken /
+  // conqueror), persist the quote so manual re-opens the rest of the day
+  // show the same line instead of a fresh random pick.
+  if (mode === "welcome" || mode === "daily-maintained"
+      || mode === "daily-broken" || mode === "conqueror") {
+    saveDailyQuote(mode, quote);
+  }
+
+  _setText("voyageCrown",  crown);
+  _setText("voyageTitle",  title);
+  _setText("voyageSub",    sub);
+  _setText("voyageQuote",  quote.t);
+  _setText("voyageAuthor", quote.a);
+  const btn = document.getElementById("voyageBtn");
+  if (btn) btn.textContent = cta;
+
+  // Pre-fill the captain name field if we already know it (e.g. after Reset
+  // clears the name, or a rare edge-case where welcome shows twice).
+  if (mode === "welcome") {
+    const input = document.getElementById("captainNameInput");
+    const cap   = document.getElementById("voyageNameCapture");
+    if (input) input.value = name || "";
+    if (cap)   cap.classList.remove("is-error");
+    // Focus the input once the modal is on-screen.
+    requestAnimationFrame(() => input?.focus());
+  }
+
+  // Streak section (daily modes only).
+  if (mode === "daily-maintained" || mode === "daily-broken") {
+    _setText("streakLbl", mode === "daily-broken" ? "Day 1 · New voyage" : "Day Streak");
+    const best = ctx.best || 0;
+    let foot;
+    if (mode === "daily-broken") {
+      foot = ctx.prevStreak > 1
+        ? `Best ever: ${best} days. Let's chase it again${name ? `, ${name}` : ""}.`
+        : `Best ever: ${best} days. A fresh sail.`;
+    } else {
+      foot = ctx.streak === best
+        ? `New personal best — keep sailing${name ? `, ${name}` : ", Captain"}.`
+        : `Best ever: ${best} days`;
+    }
+    _setText("streakFoot", foot);
+    _tickStreakNumber(ctx.streak || 0);
+  }
+
+  // Conqueror — stats + captain log (name + start/end dates + duration).
+  if (mode === "conqueror") {
+    _setText("conqStatProblems", String(ctx.problemTotal || 0));
+    _setText("conqStatMcqs",     String(ctx.quizTotal    || 0));
+    let startIso = null, endIso = null;
+    try {
+      startIso = localStorage.getItem(LS_VOYAGE_START);
+      endIso   = localStorage.getItem(LS_VOYAGE_END);
+    } catch (_) {}
+    // Ensure we have an end date — set it now on first conqueror landing.
+    if (!endIso) {
+      endIso = _todayKey();
+      try { localStorage.setItem(LS_VOYAGE_END, endIso); } catch (_) {}
+    }
+    // Fallback if a voyage start was never stamped (shouldn't happen, but
+    // safe): treat today as both start and end.
+    if (!startIso) startIso = endIso;
+    _setText("conqCaptainName", name || "Unnamed Captain");
+    _setText("conqDateStart",   formatVoyageDate(startIso));
+    _setText("conqDateEnd",     formatVoyageDate(endIso));
+    const days = voyageDurationDays(startIso, endIso);
+    _setText("conqDuration",
+      days === 1
+        ? `One day at sea · Seven seas claimed in a single voyage`
+        : `${days} days at sea · Seven seas claimed`);
+  }
+
+  scrim.classList.add("open");
+  scrim.setAttribute("aria-hidden", "false");
+
+  // The treasure map needs one layout pass to get path length. Re-place the
+  // ports + update ship position after the modal is visible.
+  requestAnimationFrame(() => {
+    _voyagePortsPlaced = false;
+    placeVoyagePorts();
+    if (typeof _lastProgress === "object" && _lastProgress) {
+      updateVoyage(_lastProgress.total, _lastProgress.solved);
+    } else {
+      updateVoyage(0, 0);
+    }
+  });
+}
+
+function hideVoyageModal() {
+  const scrim = document.getElementById("voyageScrim");
+  if (!scrim) return;
+  scrim.classList.remove("open");
+  scrim.setAttribute("aria-hidden", "true");
+}
+
+/* =====================================================================
+   CONQUEROR CHECK — fires live when the last problem+MCQ lands.
+   Also called on page load; shows once per session once earned.
+   ===================================================================== */
+let _conqueredThisSession = false;
+function checkConqueror(problemTotal, problemSolved, quizTotal, quizCorrect) {
+  if (problemTotal < 1 || quizTotal < 1) return;
+  if (problemSolved < problemTotal || quizCorrect < quizTotal) return;
+  if (_conqueredThisSession) return;
+  _conqueredThisSession = true;
+  // Close any existing modal first so conqueror takes priority.
+  hideVoyageModal();
+  setTimeout(() => {
+    openVoyageModal("conqueror", {
+      problemTotal, quizTotal
+    });
+    try { localStorage.setItem(LS_CONQ_SEEN, "1"); } catch (_) {}
+  }, 200);
+}
+
+// Cached progress numbers so openVoyageModal can repaint the map without
+// running the full updateProgress pipeline.
+let _lastProgress = null;
+
+/* Sidebar streak chip — kept in sync with storage so users see their streak
+   even when no popup is open. */
+function paintSidebarStreak() {
+  const val  = document.getElementById("streakSidebarVal");
+  const chip = document.getElementById("streakSidebarChip");
+  let streak = 0, last = null;
+  try {
+    streak = parseInt(localStorage.getItem(LS_STREAK) || "0", 10) || 0;
+    last   = localStorage.getItem(LS_LAST_VISIT);
+  } catch (_) {}
+  // Show "cold" state if last visit wasn't today or yesterday (streak is
+  // provisionally broken — will be reset next time they open).
+  const today = _todayKey();
+  const yest  = _yesterdayKey();
+  const cold  = !last || (last !== today && last !== yest);
+  if (val && chip) {
+    val.textContent = String(streak);
+    chip.classList.toggle("cold", cold);
+  }
+  // Also keep the mobile FAB streak badge in sync.
+  const fabBadge = document.getElementById("fabStreak");
+  if (fabBadge) {
+    fabBadge.textContent = String(streak);
+    fabBadge.classList.toggle("cold", cold);
+  }
+}
 
 /* =====================================================================
    RENDER
@@ -3118,6 +4956,19 @@ function render() {
   buildSidebar();
   updateProgress();
   paintResume();
+
+  // Restore every <details> that the user had open before the last refresh.
+  // Stored as a newline-joined list of IDs under `atlas.openSections`.
+  // This is what makes "I had 2.1 expanded → refresh → 2.1 still expanded" work
+  // even if the user never scrolled.
+  try {
+    const raw = localStorage.getItem("atlas.openSections") || "";
+    const ids = raw.split("\n").filter(Boolean);
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el && el.tagName === "DETAILS") el.open = true;
+    }
+  } catch (_) {}
 
   // deep link handling. Priority:
   //   1. explicit ?jump=<id> query (CTA from outside)
@@ -3140,6 +4991,89 @@ function render() {
 document.addEventListener("DOMContentLoaded", () => {
   render();
 
+  // Paint the sidebar streak chip right away so users see their current
+  // streak even before the welcome/daily modal is processed.
+  paintSidebarStreak();
+
+  // Unified voyage-modal wiring — X, scrim-click, Esc, CTA button all close.
+  // The CTA button also captures the captain's name when we're in welcome mode.
+  const scrim = document.getElementById("voyageScrim");
+
+  /* Welcome-mode gate: require a non-empty captain name before closing.
+     If empty, shake the input + show an error hint. */
+  function attemptCloseFromCta() {
+    if (scrim?.getAttribute("data-mode") === "welcome") {
+      const input = document.getElementById("captainNameInput");
+      const cap   = document.getElementById("voyageNameCapture");
+      const hint  = document.getElementById("captainNameHint");
+      const raw   = (input?.value || "").trim();
+      if (!raw) {
+        cap?.classList.add("is-error");
+        if (hint) hint.textContent = "Every ship needs a captain. Give us a name before you sail.";
+        input?.focus();
+        return;
+      }
+      // Trim down to a tidy display name (max 32 chars, collapse whitespace).
+      const clean = raw.replace(/\s+/g, " ").slice(0, 32);
+      setCaptainName(clean);
+    }
+    hideVoyageModal();
+  }
+
+  document.getElementById("voyageClose")?.addEventListener("click", () => {
+    // Dismiss via ✕ — if welcome, also save whatever's typed (even empty is
+    // fine — they'll just be addressed as "Captain" until they enter one).
+    if (scrim?.getAttribute("data-mode") === "welcome") {
+      const input = document.getElementById("captainNameInput");
+      const raw   = (input?.value || "").trim();
+      if (raw) setCaptainName(raw.replace(/\s+/g, " ").slice(0, 32));
+    }
+    hideVoyageModal();
+  });
+  document.getElementById("voyageBtn")?.addEventListener("click", attemptCloseFromCta);
+  scrim?.addEventListener("click", (e) => { if (e.target === scrim) attemptCloseFromCta(); });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && scrim?.classList.contains("open")) attemptCloseFromCta();
+  });
+
+  // Enter key inside the captain-name input → submit (same as the CTA).
+  document.getElementById("captainNameInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); attemptCloseFromCta(); }
+  });
+  // Clear the error hint as soon as they start typing.
+  document.getElementById("captainNameInput")?.addEventListener("input", () => {
+    const cap  = document.getElementById("voyageNameCapture");
+    const hint = document.getElementById("captainNameHint");
+    if (cap?.classList.contains("is-error")) {
+      cap.classList.remove("is-error");
+      if (hint) hint.textContent = "The crew will need to know who's at the helm.";
+    }
+  });
+
+  // Manual re-open from the sidebar "⛵ Voyage Map" button.
+  document.getElementById("openVoyage")?.addEventListener("click", () => {
+    openVoyageModal("manual");
+  });
+
+  // Daily popup decision — runs ONCE per calendar day on first landing.
+  // Welcome → daily-maintained → daily-broken based on visit-history.
+  // Conqueror popup has priority and fires from checkConqueror() instead.
+  (function showEntryPopup() {
+    const state = computeStreakState();
+    if (state.mode === "none") return;              // already visited today
+    if (_conqueredThisSession) return;              // conqueror has priority
+    commitVisit(state);                             // save before showing
+    paintSidebarStreak();
+    // Defer slightly so the hero + sidebar finish painting first.
+    setTimeout(() => {
+      openVoyageModal(state.mode, {
+        streak: state.streak,
+        best: state.best,
+        prevStreak: state.prevStreak
+      });
+    }, 350);
+  })();
+
   // search
   $("#search").addEventListener("input", (e) => {
     clearTimeout(searchTimer);
@@ -3157,11 +5091,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // expand / collapse
   $("#expandAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = true));
   $("#collapseAll").addEventListener("click", () => $$("#guide details").forEach(d => d.open = false));
-  $("#resetProg").addEventListener("click", () => {
-    if (!confirm("Clear all progress — problems AND quizzes?")) return;
+  // ---- Reset flow: open the confirmation modal instead of native confirm() ----
+  function performReset() {
     Object.keys(localStorage).filter(k =>
-      k.startsWith("atlas.status.") || k.startsWith("atlas.quiz.") || k === "atlas.lastSlug"
+      k.startsWith("atlas.status.") || k.startsWith("atlas.quiz.")
+      || k === "atlas.lastSlug" || k === "atlas.lastSection" || k === "atlas.openSections"
+      // Also clear streak/welcome/captain/voyage flags so reset restarts the voyage.
+      || k === LS_LAST_VISIT || k === LS_STREAK || k === LS_BEST
+      || k === LS_WELCOMED  || k === LS_CONQ_SEEN
+      || k === LS_CAPTAIN   || k === LS_VOYAGE_START || k === LS_VOYAGE_END
+      || k === LS_DAILY_QUOTE
     ).forEach(k => localStorage.removeItem(k));
+    _conqueredThisSession = false;
     $$("#guide details").forEach(d => { delete d.dataset.status; });
     // Visually un-lock every quiz so UI matches the cleared storage.
     $$(".quiz.is-answered").forEach(q => {
@@ -3176,6 +5117,48 @@ document.addEventListener("DOMContentLoaded", () => {
     computeAndPaintMeta(nodes.filter(n => n.dataset.title));
     updateProgress();
     paintResume();
+    paintSidebarStreak();
+    // Re-show the welcome modal so the voyage feels freshly started.
+    setTimeout(() => {
+      const state = computeStreakState();
+      commitVisit(state);
+      paintSidebarStreak();
+      openVoyageModal(state.mode, state);
+    }, 220);
+  }
+
+  const resetScrim = document.getElementById("resetScrim");
+  function openResetModal() {
+    if (!resetScrim) return;
+    resetScrim.classList.add("open");
+    resetScrim.setAttribute("aria-hidden", "false");
+    // Give keyboard focus to the safe (cancel) button so Enter doesn't scuttle.
+    setTimeout(() => document.getElementById("resetCancel")?.focus(), 30);
+  }
+  function closeResetModal() {
+    if (!resetScrim) return;
+    resetScrim.classList.remove("open");
+    resetScrim.setAttribute("aria-hidden", "true");
+  }
+
+  $("#resetProg").addEventListener("click", openResetModal);
+  document.getElementById("resetCancel")?.addEventListener("click", closeResetModal);
+  document.getElementById("resetCloseBtn")?.addEventListener("click", closeResetModal);
+  document.getElementById("resetConfirm")?.addEventListener("click", () => {
+    closeResetModal();
+    performReset();
+  });
+  resetScrim?.addEventListener("click", (e) => {
+    if (e.target === resetScrim) closeResetModal();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && resetScrim?.classList.contains("open")) closeResetModal();
+  });
+
+  // Mobile floating action button — re-opens the voyage map on small screens
+  // where the sidebar (and its "⛵ Voyage Map" button) is hidden.
+  document.getElementById("voyageFab")?.addEventListener("click", () => {
+    openVoyageModal("manual");
   });
 
   // ⌘K
@@ -3236,6 +5219,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // Re-apply current facet so the starred-only filter updates live.
     if (activeFacet === "starred") applyFacet("starred");
   }, true);
+
+  // Persist the set of open <details> so a refresh restores exactly the
+  // nodes the user had expanded. Uses event delegation on #guide with
+  // `capture: true` because `toggle` doesn't bubble.
+  let openPersistTimer = null;
+  function persistOpenSections() {
+    clearTimeout(openPersistTimer);
+    openPersistTimer = setTimeout(() => {
+      try {
+        const ids = $$("#guide details[open]").map(d => d.id).filter(Boolean);
+        localStorage.setItem("atlas.openSections", ids.join("\n"));
+      } catch (_) {}
+    }, 120);
+  }
+  $("#guide").addEventListener("toggle", (e) => {
+    if (e.target && e.target.tagName === "DETAILS") persistOpenSections();
+  }, true);
+  // Expand/Collapse-all + Reset also need to rewrite the snapshot.
+  $("#expandAll").addEventListener("click", persistOpenSections);
+  $("#collapseAll").addEventListener("click", persistOpenSections);
 
   // Track the last-viewed section. An IntersectionObserver watches every
   // phase / section / subnode summary-bearing node; whichever one is closest
