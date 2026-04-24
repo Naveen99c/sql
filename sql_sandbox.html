@@ -715,34 +715,80 @@
                                 <div style="margin-bottom:20px; color:var(--muted); font-style: italic;">No rows returned.</div>
                             </template>
                             
-                            <!-- Failed Case Diagnostic -->
-                            <template x-if="isValidationFailed && failedCaseName">
-                                <div style="margin-top: 10px; margin-bottom: 14px; padding: 12px 14px; border-radius: 3px; background: rgba(210,106,77,0.08); border: 1px solid rgba(210,106,77,0.3); border-left: 3px solid var(--rust);">
-                                    <div style="color: var(--rust); font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; margin-bottom: 8px;">✗ Failed Case · <span x-text="failedCaseName" style="text-transform: none; letter-spacing: 0.03em;"></span></div>
-                                    <template x-if="failedCasePassedBefore.length > 0">
-                                        <div style="color: var(--teal); font-size: 0.8rem; margin-bottom: 4px;"><span class="small-caps" style="color: var(--teal);">Passed before</span> · <span x-text="failedCasePassedBefore.join(' · ')" class="mono"></span></div>
-                                    </template>
-                                    <template x-if="failedCaseDiff">
-                                        <div style="color: var(--parchment); font-size: 0.85rem; margin-bottom: 4px;"><span class="small-caps" style="color: var(--amber);">Diff</span> · <span x-text="failedCaseDiff"></span></div>
-                                    </template>
-                                    <template x-if="failedCaseHint">
-                                        <div style="color: var(--parchment-dim); font-size: 0.88rem; font-style: italic; font-family: 'Fraunces', serif;"><span class="small-caps" style="color: var(--muted); font-style: normal;">Hint</span> · <span x-text="failedCaseHint"></span></div>
-                                    </template>
-                                </div>
-                            </template>
-
-                            <!-- Detailed diffing -->
-                            <template x-if="isValidationFailed && expectedResults.length > 0">
-                                <div style="margin-top: 10px;">
-                                    <div class="small-caps" style="margin-bottom: 6px; color: var(--amber);">Expected Output · hidden dataset</div>
-                                    <table>
-                                        <thead><tr><template x-for="col in expectedResults[0].columns"><th x-text="col"></th></template></tr></thead>
-                                        <tbody>
-                                            <template x-for="row in expectedResults[0].values">
-                                                <tr><template x-for="val in row"><td x-text="val !== null ? val : 'null'"></td></template></tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
+                            <!-- Hidden Case Results · one row per case with pass/fail pill + eye toggle -->
+                            <template x-if="caseResults.length > 0">
+                                <div style="margin-top: 16px;">
+                                    <div class="small-caps" style="margin-bottom: 8px; color: var(--amber);">Hidden Test Cases · <span x-text="caseResults.filter(c => c.status === 'passed').length + ' / ' + caseResults.length + ' passed'"></span></div>
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <template x-for="(c, idx) in caseResults" :key="idx">
+                                            <div :style="'border-radius: 3px; border: 1px solid ' + (c.status === 'passed' ? 'rgba(62,139,139,0.35)' : c.status === 'error' ? 'rgba(210,106,77,0.4)' : 'rgba(210,106,77,0.35)') + '; background: ' + (c.status === 'passed' ? 'rgba(62,139,139,0.06)' : 'rgba(210,106,77,0.06)') + '; border-left: 3px solid ' + (c.status === 'passed' ? 'var(--teal)' : 'var(--rust)') + ';'">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer;" @click="c.reveal = !c.reveal">
+                                                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                                                        <span :style="'font-family: monospace; font-size: 0.9rem; font-weight: 700; color: ' + (c.status === 'passed' ? 'var(--teal)' : 'var(--rust)') + ';'" x-text="c.status === 'passed' ? '✓' : c.status === 'error' ? '⚠' : '✗'"></span>
+                                                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--parchment-dim);" x-text="'Case ' + (idx + 1)"></span>
+                                                        <span style="color: var(--parchment); font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="c.name"></span>
+                                                    </div>
+                                                    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                                                        <span :style="'font-family: monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; padding: 2px 8px; border-radius: 2px; background: ' + (c.status === 'passed' ? 'rgba(62,139,139,0.18)' : 'rgba(210,106,77,0.16)') + '; color: ' + (c.status === 'passed' ? 'var(--teal)' : 'var(--rust)') + ';'" x-text="c.status"></span>
+                                                        <button style="background: transparent; border: 1px solid var(--muted); color: var(--parchment-dim); padding: 2px 8px; border-radius: 2px; cursor: pointer; font-size: 0.85rem;" @click.stop="c.reveal = !c.reveal" :title="c.reveal ? 'Hide details' : 'Reveal input / output / expected'" x-text="c.reveal ? '👁 Hide' : '👁 View'"></button>
+                                                    </div>
+                                                </div>
+                                                <template x-if="c.reveal">
+                                                    <div style="padding: 4px 12px 14px; border-top: 1px dashed rgba(255,255,255,0.08);">
+                                                        <template x-if="c.diff">
+                                                            <div style="color: var(--parchment); font-size: 0.85rem; margin: 10px 0 4px;"><span class="small-caps" style="color: var(--amber);">Diff</span> · <span x-text="c.diff"></span></div>
+                                                        </template>
+                                                        <template x-if="c.errorMsg">
+                                                            <div style="color: var(--rust); font-size: 0.85rem; margin: 10px 0 4px;"><span class="small-caps" style="color: var(--rust);">Runtime error</span> · <span x-text="c.errorMsg" class="mono"></span></div>
+                                                        </template>
+                                                        <template x-if="c.hint">
+                                                            <div style="color: var(--parchment-dim); font-size: 0.85rem; font-style: italic; font-family: 'Fraunces', serif; margin-bottom: 6px;"><span class="small-caps" style="color: var(--muted); font-style: normal;">Hint</span> · <span x-text="c.hint"></span></div>
+                                                        </template>
+                                                        <template x-if="c.inserts && c.inserts.length > 0">
+                                                            <div style="margin-top: 10px;">
+                                                                <div class="small-caps" style="color: var(--amber); margin-bottom: 4px;">Input · hidden setup SQL</div>
+                                                                <pre style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 2px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--parchment); white-space: pre-wrap; overflow-x: auto; margin: 0;"><template x-for="(stmt, si) in c.inserts" :key="si"><span><span x-text="stmt"></span><template x-if="si < c.inserts.length - 1"><span>&#10;</span></template></span></template></pre>
+                                                            </div>
+                                                        </template>
+                                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                                                            <div>
+                                                                <div class="small-caps" style="margin-bottom: 4px; color: var(--parchment-dim);">Your Output</div>
+                                                                <template x-if="c.actual && c.actual.columns && c.actual.columns.length > 0">
+                                                                    <table>
+                                                                        <thead><tr><template x-for="col in c.actual.columns"><th x-text="col"></th></template></tr></thead>
+                                                                        <tbody>
+                                                                            <template x-for="row in c.actual.values">
+                                                                                <tr><template x-for="val in row"><td x-text="val !== null ? val : 'null'"></td></template></tr>
+                                                                            </template>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </template>
+                                                                <template x-if="!c.actual || !c.actual.columns || c.actual.columns.length === 0">
+                                                                    <div style="color: var(--muted); font-style: italic; font-size: 0.85rem;">No rows / query did not execute.</div>
+                                                                </template>
+                                                            </div>
+                                                            <div>
+                                                                <div class="small-caps" style="margin-bottom: 4px; color: var(--amber);">Expected Output</div>
+                                                                <template x-if="c.gold && c.gold.columns && c.gold.columns.length > 0">
+                                                                    <table>
+                                                                        <thead><tr><template x-for="col in c.gold.columns"><th x-text="col"></th></template></tr></thead>
+                                                                        <tbody>
+                                                                            <template x-for="row in c.gold.values">
+                                                                                <tr><template x-for="val in row"><td x-text="val !== null ? val : 'null'"></td></template></tr>
+                                                                            </template>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </template>
+                                                                <template x-if="!c.gold || !c.gold.columns || c.gold.columns.length === 0">
+                                                                    <div style="color: var(--muted); font-style: italic; font-size: 0.85rem;">Expected: no rows.</div>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -822,10 +868,11 @@
                 expectedResults: [],
                 schemaHTML: '',
                 isValidationFailed: false,
-                failedCaseName: '',
-                failedCaseHint: '',
-                failedCaseDiff: '',
-                failedCasePassedBefore: [],
+                // Per-case results from a submit — each entry is
+                // { name, status: 'passed'|'failed'|'error', hint, inserts, actual, gold, diff, errorMsg, reveal }.
+                // `actual` / `gold` are already canonicalized (sorted if the gold is order-insensitive)
+                // so the side-by-side tables match exactly what the grader compared.
+                caseResults: [],
                 revealSolution: false,
                 revealExplanation: false,
                 solutionSQL: '',
@@ -1285,13 +1332,48 @@
                     return { columns: r.columns, values: rows };
                 },
 
+                // Strict equality used by the pass/fail gate. Mirrors the tolerances
+                // applied by `diffSummary` so that the grader and the diagnostic never
+                // disagree (e.g. case-insensitive column names).
+                resultsEqual(gold, actual) {
+                    if (gold.columns.length !== actual.columns.length) return false;
+                    for (let i = 0; i < gold.columns.length; i++) {
+                        if (String(gold.columns[i]).toLowerCase() !== String(actual.columns[i]).toLowerCase()) return false;
+                    }
+                    if (gold.values.length !== actual.values.length) return false;
+                    for (let i = 0; i < gold.values.length; i++) {
+                        const g = gold.values[i], a = actual.values[i];
+                        if (g.length !== a.length) return false;
+                        for (let j = 0; j < g.length; j++) {
+                            const gv = g[j] === null ? null : String(g[j]);
+                            const av = a[j] === null ? null : String(a[j]);
+                            if (gv !== av) return false;
+                        }
+                    }
+                    return true;
+                },
+
                 diffSummary(gold, actual) {
                     // Produce a short, human-readable diff hint between expected/actual outputs.
                     if (gold.columns.length !== actual.columns.length) {
                         return `Column count mismatch — expected ${gold.columns.length} (${gold.columns.join(', ')}), got ${actual.columns.length} (${actual.columns.join(', ')}).`;
                     }
-                    if (gold.columns.join('|').toLowerCase() !== actual.columns.join('|').toLowerCase()) {
-                        return `Column names/order mismatch — expected [${gold.columns.join(', ')}], got [${actual.columns.join(', ')}].`;
+                    // Column name/order check — distinguish "case only" (cosmetic) from a
+                    // real mismatch so the student sees a precise, actionable hint.
+                    const goldCols = gold.columns.map(c => String(c));
+                    const actCols = actual.columns.map(c => String(c));
+                    const exactMatch = goldCols.join('|') === actCols.join('|');
+                    const lowerMatch = goldCols.join('|').toLowerCase() === actCols.join('|').toLowerCase();
+                    if (!lowerMatch) {
+                        return `Column names/order mismatch — expected [${goldCols.join(', ')}], got [${actCols.join(', ')}].`;
+                    }
+                    if (!exactMatch) {
+                        // Find the first column that differs only in case and point at it.
+                        for (let i = 0; i < goldCols.length; i++) {
+                            if (goldCols[i] !== actCols[i]) {
+                                return `Column header case mismatch — expected "${goldCols[i]}", got "${actCols[i]}". Add \`AS ${goldCols[i]}\` to your SELECT. (Data values look correct.)`;
+                            }
+                        }
                     }
                     if (gold.values.length !== actual.values.length) {
                         return `Row count mismatch — expected ${gold.values.length} row(s), got ${actual.values.length}.`;
@@ -1316,6 +1398,7 @@
                     this.isValidationFailed = false;
                     this.expectedResults = [];
                     this.results = [];
+                    this.caseResults = [];
 
                     const pData = dbMeta[this.slug];
                     const userQuery = _cmEditor.getValue();
@@ -1344,74 +1427,89 @@
                     }
 
                     const orderSensitive = /\border\s+by\b/i.test(goldSql);
-                    const passed = [];
-                    let failedCase = null;
-                    let failedGold = null;
-                    let failedActual = null;
-                    let failedDiff = "";
-                    let runtimeErr = null;
+                    const results = [];
+                    let firstFailIdx = -1;
                     let lastActualRaw = [];
 
-                    for (const tc of cases) {
+                    // Run EVERY case — even after a failure — so the student sees which
+                    // edge cases pass and which break their query, not just the first one.
+                    cases.forEach((tc, idx) => {
+                        const entry = {
+                            name: tc.name,
+                            hint: tc.hint || "",
+                            inserts: (tc.inserts || []).slice(),
+                            status: 'passed',
+                            actual: { columns: [], values: [] },
+                            gold: { columns: [], values: [] },
+                            diff: '',
+                            errorMsg: '',
+                            reveal: false,
+                        };
                         try {
-                            // Rebuild base DB for each case (fresh state)
+                            // Fresh DB per case so earlier inserts don't leak.
                             this.buildDB();
                             (tc.inserts || []).forEach(s => this.db.run(this.sanitizeSQL(s)));
                             const goldRaw = this.db.exec(goldSql);
-                            const actualRaw = this.db.exec(userQuery);
+                            let actualRaw = [];
+                            try {
+                                actualRaw = this.db.exec(userQuery);
+                            } catch (userErr) {
+                                entry.status = 'error';
+                                entry.errorMsg = userErr.message;
+                                entry.gold = this.canonicalize(goldRaw, orderSensitive);
+                                if (firstFailIdx === -1) firstFailIdx = idx;
+                                results.push(entry);
+                                return;
+                            }
                             lastActualRaw = actualRaw;
                             const gold = this.canonicalize(goldRaw, orderSensitive);
                             const actual = this.canonicalize(actualRaw, orderSensitive);
+                            entry.gold = gold;
+                            entry.actual = actual;
 
-                            if (JSON.stringify(gold) === JSON.stringify(actual)) {
-                                passed.push(tc.name);
+                            if (this.resultsEqual(gold, actual)) {
+                                entry.status = 'passed';
                             } else {
-                                failedCase = tc;
-                                failedGold = goldRaw;
-                                failedActual = actualRaw;
-                                failedDiff = this.diffSummary(gold, actual);
-                                break;
+                                entry.status = 'failed';
+                                entry.diff = this.diffSummary(gold, actual);
+                                if (firstFailIdx === -1) firstFailIdx = idx;
                             }
                         } catch (err) {
-                            runtimeErr = { case: tc, message: err.message };
-                            break;
+                            entry.status = 'error';
+                            entry.errorMsg = err.message;
+                            if (firstFailIdx === -1) firstFailIdx = idx;
                         }
-                    }
+                        results.push(entry);
+                    });
 
                     // Always restore the base sample DB when done so the Database State tab is consistent.
                     this.buildDB();
 
-                    if (runtimeErr) {
-                        this.results = [];
-                        this.error = `Runtime error on case "${runtimeErr.case.name}": ${runtimeErr.message}`;
-                        this.statusMsg = `Runtime Error (case: ${runtimeErr.case.name})`;
-                        this.statusClass = "err-text";
-                        return;
-                    }
+                    this.caseResults = results;
+                    const passCount = results.filter(c => c.status === 'passed').length;
+                    const total = results.length;
 
-                    if (!failedCase) {
-                        this.statusMsg = `Accepted ✓ — passed all ${cases.length} hidden case(s): ${passed.join(' · ')}`;
+                    if (firstFailIdx === -1) {
+                        // All cases passed.
+                        this.statusMsg = `Accepted ✓ — passed all ${total} hidden case(s)`;
                         this.statusClass = "success-text";
-                        // Bridge to the SQL Atlas: mark this slug as passed so the atlas tree updates.
                         try { localStorage.setItem(`atlas.status.${this.slug}`, "passed"); } catch (_) {}
-                        // Show the user's output from the last passing case (the fully-poisoned state).
                         this.results = lastActualRaw || [];
                         return;
                     }
 
-                    // Failure path — show which case failed + a diagnostic hint.
-                    this.results = failedActual || [];
-                    this.expectedResults = failedGold || [];
+                    // Some cases failed — auto-reveal the first failing case so the
+                    // diagnostic is visible without the student having to click.
                     this.isValidationFailed = true;
-                    this.failedCaseName = failedCase.name;
-                    this.failedCaseHint = failedCase.hint || "";
-                    this.failedCaseDiff = failedDiff;
-                    this.failedCasePassedBefore = passed;
-                    const summary = passed.length
-                        ? `passed ${passed.length}/${cases.length} — failed on: "${failedCase.name}"`
-                        : `failed on first case: "${failedCase.name}"`;
-                    this.statusMsg = `Wrong Answer — ${summary}`;
+                    if (results[firstFailIdx]) results[firstFailIdx].reveal = true;
+                    const firstFail = results[firstFailIdx];
+                    this.statusMsg = `Wrong Answer — passed ${passCount}/${total} · first failure: "${firstFail.name}"`;
                     this.statusClass = "err-text";
+                    // Surface the failing case's actual output in the main "Your Output"
+                    // table so the top of the panel reflects what broke.
+                    this.results = firstFail.actual && firstFail.actual.columns && firstFail.actual.columns.length > 0
+                        ? [{ columns: firstFail.actual.columns, values: firstFail.actual.values }]
+                        : [];
                 }
             }));
         });</script>
