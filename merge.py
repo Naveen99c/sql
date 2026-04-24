@@ -250,8 +250,12 @@ overlay_markup = (
 #    </script>) as the script's body, swallowing everything inside <body>.
 # ---------------------------------------------------------------------------
 cdn_tags = []
-# Script tags: capture the entire <script ...></script> pair.
-for m in re.finditer(r'<script\b[^>]*>\s*</script>', head_cdn):
+# Script tags: capture the entire <script ...>...</script> pair.
+# DOTALL is required to pick up inline scripts with real bodies (e.g. the
+# custom compact SQL formatter IIFE). The previous `\s*` variant only matched
+# empty <script src="..."></script> tags, so any inline <script> with content
+# in the sandbox head was silently dropped from the merged atlas.
+for m in re.finditer(r'<script\b[^>]*>.*?</script>', head_cdn, flags=re.DOTALL):
     cdn_tags.append(m.group(0))
 # Self-closing <link> tags.
 for m in re.finditer(r'<link\b[^>]*/?>', head_cdn):

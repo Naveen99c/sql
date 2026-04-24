@@ -836,6 +836,187 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/sql/sql.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+<script>
+    (function () {
+        // Clause-level keywords that always trigger a newline at "clause content" scope.
+        // 'ON' is deliberately excluded so JOIN ... ON ... stays on one line.
+        var BREAK_KW = new Set([
+            'SELECT','FROM','WHERE','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET',
+            'UNION','UNION ALL','INTERSECT','EXCEPT',
+            'JOIN','LEFT JOIN','RIGHT JOIN','INNER JOIN','OUTER JOIN','CROSS JOIN',
+            'LEFT OUTER JOIN','RIGHT OUTER JOIN','FULL JOIN','FULL OUTER JOIN'
+        ]);
+        var KEYWORDS = new Set([
+            'SELECT','FROM','WHERE','GROUP','ORDER','BY','HAVING','LIMIT','OFFSET',
+            'UNION','ALL','INTERSECT','EXCEPT','DISTINCT','AS','WITH','RECURSIVE',
+            'JOIN','LEFT','RIGHT','INNER','OUTER','CROSS','FULL','ON','USING',
+            'AND','OR','NOT','IN','EXISTS','BETWEEN','LIKE','IS','NULL',
+            'CASE','WHEN','THEN','ELSE','END',
+            'INSERT','INTO','VALUES','UPDATE','SET','DELETE','CREATE','TABLE',
+            'PRIMARY','KEY','FOREIGN','REFERENCES','DEFAULT','IF','CONSTRAINT',
+            'TRUE','FALSE','ASC','DESC',
+            'OVER','PARTITION','ROWS','RANGE','PRECEDING','FOLLOWING','UNBOUNDED','CURRENT','ROW'
+        ]);
+        // Keywords where a following '(' should be preceded by a space — these
+        // are NOT function names, so "AS (" / "IN (" / "OVER (" look right.
+        var SPACE_BEFORE_LPAREN = new Set([
+            'AS','IN','EXISTS','NOT IN','NOT EXISTS','AND','OR','ON','USING','BETWEEN',
+            'UNION','UNION ALL','INTERSECT','EXCEPT','VALUES','WHERE','HAVING',
+            'GROUP BY','ORDER BY','FROM','SELECT','WHEN','THEN','ELSE','RETURN',
+            'LIKE','NOT LIKE','IS','IS NOT','CASE','WITH','BY','OVER'
+        ]);
+
+        function tokenize(sql) {
+            var tokens = []; var i = 0, n = sql.length;
+            while (i < n) {
+                var c = sql[i];
+                if (/\s/.test(c)) { while (i < n && /\s/.test(sql[i])) i++; tokens.push({type:'ws'}); continue; }
+                if (c === '-' && sql[i+1] === '-') { var e = sql.indexOf('\n', i); if (e<0) e=n; tokens.push({type:'comment', val: sql.slice(i,e)}); i=e; continue; }
+                if (c === '/' && sql[i+1] === '*') { var e2 = sql.indexOf('*/', i+2); if (e2<0) e2=n-2; tokens.push({type:'comment', val: sql.slice(i,e2+2)}); i=e2+2; continue; }
+                if (c === "'" || c === '"') {
+                    var q = c, j = i+1;
+                    while (j < n) { if (sql[j]===q){ if (sql[j+1]===q){j+=2;continue;} break; } if (sql[j]==='\\'){j+=2;continue;} j++; }
+                    tokens.push({type:'string', val: sql.slice(i,j+1)}); i=j+1; continue;
+                }
+                if (c === '`') { var jj=i+1; while (jj<n && sql[jj]!=='`') jj++; tokens.push({type:'ident', val: sql.slice(i,jj+1)}); i=jj+1; continue; }
+                if (/\d/.test(c) || (c === '.' && /\d/.test(sql[i+1]))) { var j2=i; while (j2<n && /[\d.]/.test(sql[j2])) j2++; tokens.push({type:'num', val: sql.slice(i,j2)}); i=j2; continue; }
+                if (/[A-Za-z_]/.test(c)) {
+                    var j3=i; while (j3<n && /[A-Za-z0-9_]/.test(sql[j3])) j3++;
+                    var w = sql.slice(i,j3), isKw = KEYWORDS.has(w.toUpperCase());
+                    tokens.push({type: isKw ? 'kw' : 'ident', val: isKw ? w.toUpperCase() : w}); i=j3; continue;
+                }
+                if (c === '(' || c === ')' || c === ',' || c === ';') {
+                    tokens.push({type: c==='('?'lparen':c===')'?'rparen':c===','?'comma':'semi', val: c}); i++; continue;
+                }
+                var two = sql.slice(i, i+2);
+                if (['<=','>=','<>','!=','||','::'].indexOf(two) >= 0) { tokens.push({type:'op', val: two}); i+=2; continue; }
+                tokens.push({type:'op', val: c}); i++;
+            }
+            return tokens;
+        }
+
+        function mergeClauses(tokens) {
+            var MULTI = {
+                'GROUP':{'BY':'GROUP BY'}, 'ORDER':{'BY':'ORDER BY'}, 'PARTITION':{'BY':'PARTITION BY'},
+                'UNION':{'ALL':'UNION ALL'},
+                'LEFT':{'JOIN':'LEFT JOIN','OUTER':'LEFT OUTER'},
+                'RIGHT':{'JOIN':'RIGHT JOIN','OUTER':'RIGHT OUTER'},
+                'FULL':{'JOIN':'FULL JOIN','OUTER':'FULL OUTER'},
+                'INNER':{'JOIN':'INNER JOIN'}, 'OUTER':{'JOIN':'OUTER JOIN'}, 'CROSS':{'JOIN':'CROSS JOIN'},
+                'LEFT OUTER':{'JOIN':'LEFT OUTER JOIN'},
+                'RIGHT OUTER':{'JOIN':'RIGHT OUTER JOIN'},
+                'FULL OUTER':{'JOIN':'FULL OUTER JOIN'},
+                'IS':{'NULL':'IS NULL','NOT':'IS NOT'},
+                'IS NOT':{'NULL':'IS NOT NULL'},
+                'NOT':{'IN':'NOT IN','EXISTS':'NOT EXISTS','LIKE':'NOT LIKE','BETWEEN':'NOT BETWEEN'}
+            };
+            var real = tokens.filter(function (t) { return t.type !== 'ws'; });
+            var out = []; var i = 0;
+            while (i < real.length) {
+                var t = real[i];
+                if (t.type === 'kw' && MULTI[t.val]) {
+                    var nxt = real[i+1];
+                    if (nxt && nxt.type === 'kw' && MULTI[t.val][nxt.val]) {
+                        var merged = MULTI[t.val][nxt.val];
+                        var after = real[i+2];
+                        if (MULTI[merged] && after && after.type === 'kw' && MULTI[merged][after.val]) {
+                            out.push({type:'kw', val: MULTI[merged][after.val]}); i += 3; continue;
+                        }
+                        out.push({type:'kw', val: merged}); i += 2; continue;
+                    }
+                }
+                out.push(t); i++;
+            }
+            return out;
+        }
+
+        function formatSQLCompact(sql) {
+            var real = mergeClauses(tokenize(sql));
+            function indent(n) { var s=''; for (var k=0;k<n;k++) s+='    '; return s; }
+            var lines = []; var cur = ''; var level = 0;
+            var pstk = []; // each frame: {kind:'subquery', lvl} or {kind:'inline'}
+
+            function commit() { if (cur.trim().length) lines.push(cur.replace(/\s+$/,'')); cur = ''; }
+            function breakTo(lvl) { commit(); cur = indent(lvl); }
+            function subLvl() { for (var j = pstk.length-1; j>=0; j--) if (pstk[j].kind==='subquery') return pstk[j].lvl; return -1; }
+            function hasInline() { return pstk.some(function (f) { return f.kind === 'inline'; }); }
+
+            var prev = null;
+            for (var i = 0; i < real.length; i++) {
+                var t = real[i];
+
+                if (t.type === 'kw' && BREAK_KW.has(t.val) && !hasInline()) {
+                    var nearest = subLvl();
+                    var lvl = nearest >= 0 ? nearest + 1 : level;
+                    if (cur.trim().length) breakTo(lvl);
+                    cur += t.val; prev = t; continue;
+                }
+
+                if (t.type === 'lparen') {
+                    var k = i + 1;
+                    while (k < real.length && real[k].type === 'comment') k++;
+                    var nx = real[k];
+                    var isSub = nx && nx.type === 'kw' && (nx.val === 'SELECT' || nx.val === 'WITH') && !hasInline();
+                    if (prev) {
+                        var prevIsFnName = (prev.type === 'ident' || (prev.type === 'kw' && !SPACE_BEFORE_LPAREN.has(prev.val)));
+                        if (!prevIsFnName && !cur.endsWith(' ') && !cur.endsWith('(')) {
+                            if (prev.type === 'kw' && SPACE_BEFORE_LPAREN.has(prev.val)) cur += ' ';
+                            else if (prev.type === 'op' && prev.val !== '.') cur += ' ';
+                            else if (prev.type === 'rparen' || prev.type === 'comma') cur += ' ';
+                            else if (prev.type === 'num' || prev.type === 'string') cur += ' ';
+                        }
+                    }
+                    cur += '(';
+                    if (isSub) {
+                        var nearest2 = subLvl();
+                        var openLvl = nearest2 >= 0 ? nearest2 + 1 : level;
+                        pstk.push({kind:'subquery', lvl: openLvl});
+                    } else {
+                        pstk.push({kind:'inline'});
+                    }
+                    prev = t; continue;
+                }
+
+                if (t.type === 'rparen') {
+                    var frame = pstk.pop();
+                    if (frame && frame.kind === 'subquery') breakTo(frame.lvl);
+                    cur += ')'; prev = t; continue;
+                }
+
+                if (t.type === 'comma') {
+                    cur += ',';
+                    if (!hasInline()) {
+                        var nearest3 = subLvl();
+                        var lvl3 = (nearest3 >= 0 ? nearest3 : level - 1) + 2;
+                        breakTo(lvl3);
+                    } else {
+                        cur += ' ';
+                    }
+                    prev = t; continue;
+                }
+
+                if (t.type === 'semi') { cur += ';'; prev = t; continue; }
+
+                // Default: smart spacing.
+                var needSpace = false;
+                if (prev) {
+                    var noSpaceAfter = prev.type === 'lparen' || (prev.type === 'op' && prev.val === '.');
+                    var noSpaceBefore = t.type === 'rparen' || (t.type === 'op' && t.val === '.');
+                    if (!noSpaceAfter && !noSpaceBefore && cur.length > 0 && !cur.endsWith(' ') && !cur.endsWith('(')) {
+                        needSpace = true;
+                    }
+                }
+                if (needSpace) cur += ' ';
+                cur += t.val;
+                prev = t;
+            }
+            commit();
+            return lines.join('\n');
+        }
+
+        window.formatSQLCompact = formatSQLCompact;
+    })();
+    </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material-darker.min.css">
 
