@@ -1127,7 +1127,22 @@ body.sandbox-open { overflow: hidden; }
             border-color: var(--amber-hot);
             box-shadow: 0 6px 20px -8px rgba(229,166,59,0.5);
             transform: translateY(-1px);
-        }#sandboxOverlay .panel-header span[style*="cursor:pointer"], #sandboxOverlay .panel-header .reset-chip {
+        }#sandboxOverlay .btn[disabled], #sandboxOverlay .btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            transform: none !important;
+            box-shadow: none !important;
+        }#sandboxOverlay .btn-spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: btnSpin 0.7s linear infinite;
+            vertical-align: -1px;
+            margin-right: 6px;
+        }@keyframes btnSpin { to { transform: rotate(360deg); } }#sandboxOverlay .panel-header span[style*="cursor:pointer"], #sandboxOverlay .panel-header .reset-chip {
             font-family: 'JetBrains Mono', monospace !important;
             font-size: 0.62rem !important;
             text-transform: uppercase;
@@ -6200,8 +6215,14 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                          merge-time header strip and stay visible in both the
                          standalone sandbox and the atlas overlay. -->
                     <span class="editor-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <button class="btn btn-run" @click="executeQuery()" title="Run query (⌘/Ctrl+Enter)">▶ Run</button>
-                        <button class="btn btn-submit" @click="submitCode()" title="Validates against hidden edge-case dataset">Submit</button>
+                        <button class="btn btn-run" @click="runWithSpinner()" :disabled="isRunning || isSubmitting" title="Run query (⌘/Ctrl+Enter)">
+                            <template x-if="isRunning"><span><span class="btn-spinner"></span>Running…</span></template>
+                            <template x-if="!isRunning"><span>▶ Run</span></template>
+                        </button>
+                        <button class="btn btn-submit" @click="submitWithSpinner()" :disabled="isRunning || isSubmitting" title="Validates against hidden edge-case dataset">
+                            <template x-if="isSubmitting"><span><span class="btn-spinner"></span>Submitting…</span></template>
+                            <template x-if="!isSubmitting"><span>Submit</span></template>
+                        </button>
                         <span class="reset-chip" @click="insertTemplate()" title="Reset editor to starter template">Reset</span>
                     </span>
                 </div>
@@ -6393,6 +6414,8 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                 activeTab: 'schema',
                 executed: false,
                 submitted: false,
+                isRunning: false,
+                isSubmitting: false,
                 statusMsg: '',
                 statusClass: '',
                 error: null,
@@ -6831,6 +6854,32 @@ Every term used in this atlas, defined in one line with a pointer to where it's 
                     this.schemaHTML = html;
                 },
                 
+                // Wrapper that flips the `isRunning` flag, yields to the browser so the
+                // spinner actually paints, then runs the (synchronous) sql.js query.
+                // Without the requestAnimationFrame yield the flag would flip on and off
+                // inside a single tick and the user would never see the loading state.
+                async runWithSpinner() {
+                    if (this.isRunning || this.isSubmitting) return;
+                    this.isRunning = true;
+                    try {
+                        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                        this.executeQuery();
+                    } finally {
+                        this.isRunning = false;
+                    }
+                },
+
+                async submitWithSpinner() {
+                    if (this.isRunning || this.isSubmitting) return;
+                    this.isSubmitting = true;
+                    try {
+                        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                        this.submitCode();
+                    } finally {
+                        this.isSubmitting = false;
+                    }
+                },
+
                 executeQuery() {
                     this.activeTab = 'result';
                     this.executed = true;
