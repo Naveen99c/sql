@@ -849,10 +849,10 @@
       A structured SQL interview prep guide — read the theory, then solve the problem right here in the browser. No account, no setup, progress saved locally.
     </p>
     <div class="flex flex-wrap gap-3 reveal" style="animation-delay:.35s">
-      <span class="chip">7 Phases</span>
-      <span class="chip teal" id="chipProblems">58 Problems</span>
-      <span class="chip rust">Hidden Edge-Case Validator</span>
-      <span class="chip muted">⌘K to search · ?j for next section</span>
+      <span class="chip" title="Phase 0 – Phase 6 plus a Quick Reference: mental model, schema, core patterns, windows, advanced patterns, data types, performance.">7 Phases</span>
+      <span class="chip teal" id="chipProblems" title="Every problem runs in an in-browser SQLite sandbox with a hidden edge-case validator.">58 Problems</span>
+      <span class="chip rust" title="Your query is scored against a gold query across multiple datasets — not just the visible example. A pass means your query handles ties, NULLs, and empty groups.">Hidden Edge-Case Validator</span>
+      <span class="chip muted" title="⌘K opens the jump palette · ?j / ?k move between sections · / focuses the filter.">⌘K to search · ?j for next section</span>
     </div>
     <div class="rule mt-14"></div>
   </div>
@@ -1755,7 +1755,49 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <!-- ================= EMBEDDED GUIDE MARKDOWN (populated by patch_atlas.py) ================= -->
-<script id="guide-md" type="text/markdown"># PHASE 0 — The Mental Model
+<script id="guide-md" type="text/markdown"># How to Read This Atlas
+
+> *The fastest way to master SQL in interview-ready shape.*
+
+**Who this is for.** You can write `SELECT … FROM … WHERE …` but Hard-tier problems still stump you. This atlas gives you the **patterns** behind those problems, the **intuition** for each, and a browser sandbox to solve them end-to-end.
+
+### Emoji legend — used consistently throughout
+
+| Icon | Meaning |
+|---|---|
+| 🧠 | **Intuition** — the one-sentence mental model. Read this first. |
+| ⚙️ | **Mechanics** — how the engine actually executes it. |
+| ⚠️ | **Gotcha** — silent bug, wrong answer, or portability trap. |
+| 💡 | **Tip** — a practical rule of thumb or dialect note. |
+| 📝 | **Sample Problem** — a worked LeetCode-style example. |
+| 🔗 | **Practice** — problems in the sandbox that drill this pattern. |
+
+### Recommended path for a first-time reader
+
+1. **Phase 0** — mental model (logical order, NULL, types). *Skipping this breaks everything downstream.*
+2. **Phase 2.1 – 2.5** — aggregation, CTEs, self-joins, anti-joins. 80% of Easy/Medium problems live here.
+3. **Phase 3.1 – 3.3** — ranking, LAG/LEAD, window frames. 80% of Medium/Hard.
+4. **Phase 4.1** — gaps & islands. The single most-asked "Hard" pattern.
+5. **Phase 5.1 – 5.2** — dates and string aggregation. Small syntax, huge interview surface area.
+6. Everything else is reach-for-when-needed. The **Pattern Selection Decision Tree** at the bottom tells you which section matches your problem you're staring at.
+
+### How to use the sandbox
+
+Every 🔗 Practice link opens a problem in an in-browser SQLite. Type your query, hit **Run**, and a **hidden edge-case validator** compares your output against a gold query across multiple datasets — not just the visible sample. A ✅ means your query handles ties, NULLs, empty groups, and boundary cases, not just the happy path. No account. No setup. Progress saves in your browser.
+
+### Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `⌘K` / `Ctrl+K` | Jump palette — fuzzy-search any phase, section, or problem |
+| `/` | Focus the filter box |
+| `?j` | Jump to the next section |
+| `?k` | Jump to the previous section |
+
+---
+---
+
+# PHASE 0 — The Mental Model
 
 > *Before writing any SQL, understand how the engine thinks.*
 
@@ -1781,6 +1823,8 @@ Many bugs come from assuming `SELECT` runs before `WHERE`.
 - You **can** reference it in `ORDER BY` — `ORDER BY` runs after `SELECT`.
 - Window functions run during `SELECT`, so you cannot filter on them in `WHERE` — wrap in a CTE first.
 - `HAVING` can use aggregate expressions; `WHERE` cannot.
+
+💡 **"Creating" an alias happens in step 5; "referencing" one only becomes legal from step 7 onward.** That's the whole trick — the alias exists in the output tuple by the time `ORDER BY` runs, but `WHERE` was evaluated two steps earlier when the alias was still just a piece of text.
 
 **Can I use a SELECT alias here?**
 
@@ -1856,6 +1900,22 @@ WHERE col IS NOT NULL
 ```
 
 Fix: always add `WHERE col IS NOT NULL` in the subquery, or use `NOT EXISTS`.
+
+```sql
+-- ❌ Silently returns zero rows if the subquery produces any NULL
+SELECT * FROM customers
+WHERE id NOT IN (SELECT customer_id FROM orders);
+
+-- ✅ NULL-safe: NOT EXISTS checks row-by-row, NULL just means "no match"
+SELECT * FROM customers c
+WHERE NOT EXISTS (
+    SELECT 1 FROM orders o WHERE o.customer_id = c.id
+);
+```
+
+💡 **Rule of thumb:** `NOT EXISTS` is the default choice for "rows without a match." Reach for `NOT IN` only when you've personally verified the subquery can never produce a `NULL`.
+
+💡 **Why does `UNION` treat `NULL = NULL` as equal for deduplication, when `=` does not?** Different operations have different notions of equality: `=` is *truth-valued* (three-valued logic), but `UNION`, `GROUP BY`, `DISTINCT`, and `PARTITION BY` use *structural* equality — "do these tuples look identical?" — and NULL looks identical to NULL. The SQL standard picked structural equality for grouping because the alternative (never grouping NULLs together) would produce one row per NULL, which is almost never useful.
 
 ### NULL-Handling Functions
 
@@ -1950,12 +2010,14 @@ SELECT CAST(a AS DECIMAL) / b    -- instead of a / b (integer division!)
 SELECT a * 1.0 / b               -- alternative trick
 ```
 
-⚠️ **Integer division trap:**
+⚠️ **Integer division trap — the #1 cross-engine silent-bug generator.**
 ```sql
 SELECT 7 / 2        -- MySQL: 3.5000 | PostgreSQL: 3 | SQL Server: 3
 SELECT 7 / 2.0      -- All: 3.5
 SELECT CAST(7 AS DECIMAL) / 2  -- All: 3.5
 ```
+
+💡 **Rule of thumb:** the moment you see a `/` in a query that needs to return a fraction (percentages, ratios, averages), **cast one side to `DECIMAL` or multiply by `1.0`**. Don't assume the engine will do the right thing — PostgreSQL and SQL Server silently truncate. The interviewer-favorite bug is `a / b` returning `0` because both are integers and `a < b`.
 
 ---
 
@@ -2146,13 +2208,23 @@ CREATE TABLE orders (
 
 ## 1.3 Normalization (Quick Reference)
 
-| Normal Form | Rule | Violation Example | Fix |
-|---|---|---|---|
-| **1NF** | No repeating groups or arrays in a cell | `tags = 'sql,python,java'` | Separate table `user_tags` |
-| **2NF** | Every non-key column depends on the **entire** PK | Composite PK `(order_id, product_id)` with `customer_name` depending only on `order_id` | Move `customer_name` to `orders` table |
-| **3NF** | No transitive dependencies (non-key → non-key) | `employee` table with `dept_id`, `dept_name` (dept_name depends on dept_id, not employee) | Move `dept_name` to `departments` table |
+🧠 *Normalization prevents anomalies — situations where a simple `INSERT`, `UPDATE`, or `DELETE` leaves the database inconsistent.*
 
-🧠 **When to denormalize:** Reporting tables, data warehouses, and high-read/low-write scenarios benefit from denormalization to avoid expensive JOINs.
+| Normal Form | Rule | Violation Example | Fix | Anomaly it prevents |
+|---|---|---|---|---|
+| **1NF** | No repeating groups or arrays in a cell | `tags = 'sql,python,java'` | Separate table `user_tags` | **Update anomaly** — changing "python" to "python3" means a string surgery on every row that has it. |
+| **2NF** | Every non-key column depends on the **entire** PK | Composite PK `(order_id, product_id)` with `customer_name` depending only on `order_id` | Move `customer_name` to `orders` table | **Redundancy** — `customer_name` is repeated on every product line of the same order. |
+| **3NF** | No transitive dependencies (non-key → non-key) | `employee` table with `dept_id`, `dept_name` (dept_name depends on dept_id, not employee) | Move `dept_name` to `departments` table | **Delete anomaly** — deleting the last employee in a department also erases the department's name. |
+
+**The three anomalies, concretely:**
+
+| Anomaly | What breaks |
+|---|---|
+| **Insert anomaly** | You can't add a new *entity* (e.g., a department with no employees yet) because the only place it lives is inside another table. |
+| **Update anomaly** | Changing one attribute means updating many rows; miss one and the data contradicts itself. |
+| **Delete anomaly** | Removing one fact accidentally removes another unrelated fact that happened to live in the same row. |
+
+🧠 **When to denormalize:** Reporting tables, data warehouses, and high-read/low-write scenarios benefit from denormalization to avoid expensive JOINs. The tradeoff is accepting controlled redundancy (and the update cost that comes with it) in exchange for fewer joins at read time.
 
 ### Surrogate vs Natural Keys
 
@@ -2180,7 +2252,7 @@ CREATE TABLE orders (
 | Integer division | Returns decimal | Truncates to int | Truncates to int |
 | String agg | `GROUP_CONCAT` | `STRING_AGG` | `STRING_AGG` (2017+) |
 | `IF` in query | `IF(cond, a, b)` | ❌ (use `CASE`) | `IIF(cond, a, b)` |
-| `QUALIFY` (filter on window result — Snowflake/BigQuery/Databricks/Teradata) | ❌ | ❌ | ❌ |
+| `QUALIFY` (filter on window result) | ❌ | ❌ | ❌ *(available on Snowflake, BigQuery, Databricks, Teradata, H2)* |
 
 ---
 ---
@@ -2246,6 +2318,10 @@ COUNT(*) FILTER (WHERE status = 'active') AS active_emp
 
 ### Sub-Pattern B — HAVING for Group Filtering
 
+🧠 *"Give me only the groups that satisfy this condition after aggregation."*
+
+**Example ask:** *Which customers have placed at least 3 orders AND spent over $1000 total?*
+
 ```sql
 -- Customers with 3+ orders totaling > $1000
 SELECT customer_id, COUNT(*) AS order_count, SUM(amount) AS total_spent
@@ -2253,6 +2329,8 @@ FROM orders
 GROUP BY customer_id
 HAVING COUNT(*) >= 3 AND SUM(amount) > 1000;
 ```
+
+💡 **WHERE vs HAVING:** `WHERE` filters rows *before* grouping; `HAVING` filters groups *after* aggregation. Never put `COUNT(*) > 1` in `WHERE` — the aggregate doesn't exist yet at that stage.
 
 ### Sub-Pattern C — "Bought All Products" (Relational Division)
 
@@ -2284,6 +2362,10 @@ FAANG interviewers often ask for *both* phrasings. The count-based version is us
 
 ### Sub-Pattern D — Ratio / Percentage Calculation
 
+🧠 *"What percent of X satisfies condition Y?"*
+
+**Example ask:** *What's the monthly return rate — the % of orders that came back as 'returned'?*
+
 ```sql
 SELECT
     DATE_FORMAT(order_date, '%Y-%m') AS month,
@@ -2294,6 +2376,8 @@ SELECT
 FROM orders
 GROUP BY DATE_FORMAT(order_date, '%Y-%m');
 ```
+
+💡 **The 1.0 trick:** multiplying by `100.0` (not `100`) forces floating-point division — integer math would truncate `3 / 10` to `0`. `AVG(status = 'returned')` is an even shorter equivalent in Postgres/SQLite.
 
 ### 📝 Sample Problem — Duplicate Emails
 
@@ -2448,6 +2532,8 @@ Join a table to **itself** to compare rows within the same table. Also: understa
 
 Think of the table as two copies (alias them `a` and `b`). The join condition defines the relationship between the two copies.
 
+⚠️ **Aliases are mandatory, not optional.** `SELECT * FROM employees JOIN employees ON …` fails with "ambiguous column" — SQL can't tell which copy's `id` you mean. Always write `FROM employees a JOIN employees b …` and qualify every column with `a.` or `b.`.
+
 | Scenario | Join Condition |
 |---|---|
 | Employee vs Manager | `e.manager_id = m.id` |
@@ -2481,6 +2567,10 @@ WHERE YEAR(o.order_date) = 2024;
 
 ### Sub-Pattern A — Comparing Rows Within Same Table
 
+🧠 *"Compare each row against another row in the same table."*
+
+**Example ask:** *Which employees earn more than their own manager?* The table has both people, linked by `managerId` — so join the table to itself, once as the employee and once as the manager.
+
 ```sql
 -- Employees earning more than their manager
 SELECT e.name AS Employee
@@ -2489,7 +2579,13 @@ JOIN Employee m ON e.managerId = m.id
 WHERE e.salary > m.salary;
 ```
 
+💡 **Aliases matter.** Without `e` and `m`, the database can't tell which copy of `Employee` you mean. Always alias both sides of a self-join.
+
 ### Sub-Pattern B — Finding Pairs
+
+🧠 *"List every unique pair of rows that share a property."*
+
+**Example ask:** *Find every pair of students who are in the same class* — without listing `(Alice, Bob)` and `(Bob, Alice)` separately, and without pairing Alice with herself.
 
 ```sql
 -- Find all pairs of students in the same class
@@ -2497,6 +2593,8 @@ SELECT a.name AS student1, b.name AS student2
 FROM students a
 JOIN students b ON a.class_id = b.class_id AND a.id < b.id;
 ```
+
+💡 **The `a.id < b.id` trick.** It does two things at once: skips the `(x, x)` self-pair, and de-duplicates `(Alice, Bob)` / `(Bob, Alice)` by keeping only the ordering where the smaller id is on the left.
 
 ### Sub-Pattern C — Non-Equi / Range Joins
 
@@ -2755,6 +2853,8 @@ SELECT * FROM a RIGHT JOIN b ON a.id = b.id;
 
 🧠 *"For each row of the left table, run a correlated subquery in the FROM clause."*
 
+**Why `LATERAL` exists.** A normal subquery in the `FROM` clause is evaluated **once**, independently of the outer query — it can't see columns from other tables in the `FROM`. `LATERAL` drops that restriction: the right-hand subquery is evaluated **once per outer row** and **can reference** columns from the preceding tables. This is the only clean way to write "top 3 per group" that also returns multiple columns *and* multiple rows from the subquery — something a correlated scalar subquery in `SELECT` cannot do (scalar = one column, one row).
+
 ```sql
 -- PostgreSQL: LATERAL
 SELECT d.dept_name, top_earner.*
@@ -2902,6 +3002,23 @@ Assign a positional number to each row **within a partition** based on an orderi
 | `RANK()` | Same rank for ties | Gaps after ties | 1, 1, 3 |
 | `DENSE_RANK()` | Same rank for ties | No gaps | 1, 1, 2 |
 
+**Side-by-side on the same input — the difference becomes obvious:**
+
+```
+ salary    ROW_NUMBER   RANK   DENSE_RANK
+  100           1          1          1
+  100           2          1          1
+   90           3          3          2    ← RANK skips 2 (because two rows tied at 1)
+   80           4          4          3    ← DENSE_RANK never skips
+   80           5          4          3
+   70           6          6          4    ← RANK skips 5; DENSE_RANK keeps counting consecutively
+```
+
+🧠 **The mental model:**
+- `ROW_NUMBER` — "give every row a unique ticket number." Arbitrary among ties.
+- `RANK` — "Olympic-style: tied athletes share position 1, the next gets position 3."
+- `DENSE_RANK` — "count *distinct* ranks: 1st, 2nd, 3rd — never skip a position number."
+
 ⚙️ **How PARTITION BY + ORDER BY work together:**
 
 ```
@@ -3046,9 +3163,11 @@ LEAD(column, offset, default) OVER (PARTITION BY ... ORDER BY ...)
 |---|---|---|
 | `column` | The value to retrieve | — |
 | `offset` | How many rows back/forward | 1 |
-| `default` | Value if no such row exists (first/last rows) | NULL |
+| `default` | Value returned when no such row exists — i.e. at the **edges** of the partition | NULL |
 
 ⚙️ The engine sorts the partition, then for each row looks `offset` positions back (LAG) or forward (LEAD) and returns that row's value.
+
+💡 **Edges explained.** `LAG` on the first row of a partition has nothing to look back at → returns the default (NULL unless you pass one). Same for `LEAD` on the last row. This is why a running month-over-month calculation has a `NULL` for the first month — there's no "previous" to compare to. Supply the default explicitly (`LAG(revenue, 1, 0)`) when `NULL` would poison a downstream formula.
 
 ### Related Functions
 
@@ -3201,6 +3320,8 @@ ROWS BETWEEN <start> AND <end>
 
 ⚠️ **Default frame** (when ORDER BY is specified): `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. This can silently group ties, causing unexpected results with `SUM`. Prefer explicit `ROWS`.
 
+💡 **Why is this the default then?** ANSI SQL chose `RANGE` because it's *logically* more correct — "all rows with an ORDER BY value ≤ current" is a deterministic set, whereas `ROWS` depends on the arbitrary physical order of tied rows. The default is safe for ranking and cumulative distribution (`CUME_DIST`, `PERCENT_RANK`) where ties **should** produce the same result. It's only surprising for `SUM` / `COUNT` / `AVG`, where you usually want each physical row counted separately. Rule: if you're aggregating, say `ROWS` explicitly; if you're ranking, the default is fine.
+
 **Concrete tie-bug demo.** Two rows share `dt = '2024-01-02'`:
 
 ```
@@ -3258,6 +3379,10 @@ FROM daily_metrics;
 
 ### Sub-Pattern C — Cumulative Max / Min
 
+🧠 *"What's the highest (or lowest) value seen up to each row?"*
+
+**Example ask:** *For every trading day, show that day's price alongside the all-time-high price reached on or before that day.*
+
 ```sql
 SELECT
     date,
@@ -3268,6 +3393,8 @@ SELECT
     ) AS all_time_high
 FROM stock_prices;
 ```
+
+💡 **The `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` frame is the running-window idiom.** Swap `MAX` → `SUM` for a running total, or `MIN` for a running low-water mark. Without the frame clause, many engines default to `RANGE` and give subtly different results on ties.
 
 ### 📝 Sample Problem — Last Person to Fit in the Bus
 
@@ -3327,6 +3454,8 @@ for totals, but **distinct** counts need the correlated subquery (or a self-join
 |---|---|---|
 | `PERCENTILE_CONT(p)` | The value at percentile `p`, interpolated between the two nearest rows | Yes (continuous) |
 | `PERCENTILE_DISC(p)` | The value of the first row whose cumulative fraction ≥ `p` | No (discrete — picks an actual row) |
+
+⚙️ **What is `WITHIN GROUP (ORDER BY …)`?** `PERCENTILE_CONT` is an **ordered-set aggregate** — it can't compute a percentile without knowing how to rank the values, so the `ORDER BY` goes *inside* the function in a dedicated clause. Compare to a normal aggregate like `SUM(x)` where order doesn't matter. You'll see the same `WITHIN GROUP` syntax on `LISTAGG` (Oracle) and `MODE()` — any aggregate whose answer depends on the sort order of its inputs.
 
 ```sql
 -- Median (50th percentile) + P90 salary
@@ -3429,6 +3558,17 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) = 1;
 
 🧠 *"I need subtotals and grand totals without running separate queries."*
 
+**Which to reach for:**
+
+| You want… | Use |
+|---|---|
+| Hierarchical subtotals — "by region, by region+product, plus a grand total" | `ROLLUP(region, product)` |
+| Every possible combination — "by region, by product, by both, and grand total" | `CUBE(region, product)` |
+| A specific set of groupings you hand-pick (not a fixed hierarchy) | `GROUPING SETS (…)` |
+
+In other words: `ROLLUP` is `CUBE` restricted to a prefix hierarchy; `GROUPING SETS` is the escape hatch for everything else.
+
+
 ```sql
 -- ROLLUP: hierarchical subtotals (rightmost to leftmost)
 SELECT region, product, SUM(sales) AS total
@@ -3507,6 +3647,14 @@ diff:  0  0  0  1  1  2   ← value - rn
 Rows with the **same difference** belong to the **same island**. GROUP BY this difference to find island boundaries.
 
 **Why it works:** In a perfect consecutive run, value increases by 1 and so does row_number, so their difference stays constant. A gap bumps the value without bumping row_number, creating a new group.
+
+🧠 **Walk it through on the example above:**
+- From `1 → 2 → 3`, value and rn both step by 1 → `value − rn` stays `0` → same island.
+- From `3 → 5`, value jumps by 2 but rn still steps by 1 → `value − rn` becomes `1` → new island begins.
+- From `5 → 6`, both step by 1 again → still `1` → same island.
+- From `6 → 8`, value jumps by 2 → `value − rn` becomes `2` → another new island.
+
+So `GROUP BY (value − rn)` collapses each run of consecutive values into one group. This single trick is the core of at least a dozen Hard-tier interview problems.
 
 ### Method 1 — Row Difference
 
@@ -3599,6 +3747,10 @@ GROUP BY user_id, grp;
 
 ### Sub-Pattern B — Consecutive Rows with Same Value
 
+🧠 *"Collapse runs of identical values — the classic gaps-&-islands problem."*
+
+**Example ask:** *An event log has rows like `[online, online, offline, offline, online]`. How long was each 'online' streak, and when did it start and end?*
+
 ```sql
 WITH islands AS (
     SELECT *,
@@ -3610,6 +3762,8 @@ SELECT status, MIN(id), MAX(id), COUNT(*) AS run_length
 FROM islands
 GROUP BY status, grp;
 ```
+
+💡 **Why the subtraction trick works.** `ROW_NUMBER` over the whole table advances every row by 1. `ROW_NUMBER` partitioned by `status` advances only within each status. The *difference* stays constant as long as the status doesn't change — so rows in the same consecutive run share a `grp` value. Any time the status flips, the gap opens up by one, giving a new `grp`. Group by `(status, grp)` to collapse each run.
 
 ### Sub-Pattern C — Finding Gaps (the other half of "Gaps & Islands")
 
@@ -3692,6 +3846,8 @@ JOIN bookings b
 **Algorithm:**
 1. For each row, check if it starts after the max end-date seen so far. If yes, new group.
 2. Cumulative MAX of end_date across the ordered set.
+
+🧠 **Why the frame is `ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING`?** We want the max end-date **before** the current row, not including it. If we included the current row, every row's `prev_max_end` would already be `>= current.end_date` and no new group would ever start. The `1 PRECEDING` boundary is the "everything I've seen so far *except* myself" window — this comparison pattern appears any time you need "did the previous run already cover me?"
 
 ```sql
 WITH ordered AS (
@@ -3854,7 +4010,7 @@ SELECT * FROM cte;
 
 ⚠️ **Pitfall:** Forgetting termination → infinite loop. Always add a `WHERE depth < N` or rely on the data naturally exhausting.
 
-⚠️ **UNION ALL vs UNION:** Use `UNION ALL` (required by most engines). `UNION` deduplicates each iteration (PostgreSQL allows it, MySQL does not).
+⚠️ **UNION ALL vs UNION:** Use `UNION ALL` (required by most engines). `UNION` deduplicates each iteration (PostgreSQL allows it, MySQL does not). Getting this wrong costs you either (a) a cryptic "recursive reference to UNION is not allowed" parse error on MySQL, or (b) silently dropped rows on PostgreSQL — whichever iteration produces a duplicate path is dropped, so a bill-of-materials with repeated part numbers loses data.
 
 💡 **Standard SQL `SEARCH` / `CYCLE` clauses** (PostgreSQL 14+, Db2, Oracle): bolt onto a recursive CTE to guarantee a traversal order and break cycles safely:
 ```sql
@@ -3977,9 +4133,29 @@ Transform **row values** into **column headers**. SQL doesn't have a built-in PI
 1. **GROUP BY** the row identifier (what you want as rows in the output).
 2. **Spread** each category value into its own column using `CASE WHEN category = 'X' THEN value END`, wrapped in `MAX/MIN/SUM`.
 
-**Why MAX/MIN works:** Within each group, exactly one row matches each `CASE WHEN`. `MAX` of one value and a bunch of NULLs returns that one value.
+**Visualize the "spread" step before aggregation:**
+
+```
+INPUT (tall):                  AFTER CASE (one column per category, still tall):
+ student | subject | score      student | Math | English | Science
+---------+---------+-------    ---------+------+---------+--------
+   1     | Math    |   90        1     |  90  |   NULL  |   NULL
+   1     | English |   80        1     | NULL |    80   |   NULL
+   1     | Science |   85        1     | NULL |   NULL  |    85
+
+                               AFTER GROUP BY student + MAX(…):
+                                student | Math | English | Science
+                               ---------+------+---------+--------
+                                   1    |  90  |    80   |    85
+```
+
+**Why MAX/MIN works:** Within each group, exactly one row matches each `CASE WHEN`; the rest are `NULL`. `MAX` (or `MIN`, or `SUM`) skips NULLs, so you're left with the one non-null value per cell.
 
 ### Sub-Pattern A — Simple Pivot
+
+🧠 *"Rotate a narrow/tall table so each category becomes its own column."*
+
+**Example ask:** *The `scores` table stores one row per `(student, subject)`. Make a wide table with one row per student and columns `Math`, `English`, `Science`.*
 
 ```sql
 SELECT
@@ -3990,6 +4166,8 @@ SELECT
 FROM scores
 GROUP BY student_id;
 ```
+
+💡 **Why `MAX(CASE …)`?** The `CASE` expression returns `score` for the matching subject and `NULL` for every other row. `MAX` (or `SUM`) picks the single non-null value per student. You can use `SUM` if the cell is a number you'd otherwise be double-counting; `MAX` is safer when the value could be negative or non-numeric.
 
 ### Sub-Pattern B — Pivot with Multiple Rows per Category
 
@@ -4013,7 +4191,9 @@ GROUP BY rn;
 
 ### Sub-Pattern C — Unpivoting (Columns → Rows)
 
-The reverse: break columns into rows using `UNION ALL` or `CROSS JOIN LATERAL`.
+🧠 *"Break one wide row with many columns into several tall rows — the inverse of a pivot."*
+
+**Example ask:** *The `sales` table has columns `q1, q2, q3, q4`. Produce one row per `(id, quarter, revenue)` so you can group, filter, or join on it like normal data.*
 
 ```sql
 -- Manual unpivot
@@ -4025,6 +4205,8 @@ SELECT id, 'Q3', q3 FROM sales
 UNION ALL
 SELECT id, 'Q4', q4 FROM sales;
 ```
+
+💡 **Prefer `UNION ALL` over `UNION`.** `UNION` deduplicates — it's slower and silently drops rows where two quarters happen to have identical revenue. On Postgres you can also use `CROSS JOIN LATERAL (VALUES (…))`, which avoids scanning the base table four times.
 
 ### Median Calculation
 
@@ -4085,8 +4267,8 @@ GROUP BY id;
 |---|---|---|---|
 | 1 | Product Sales Analysis III | Medium | [▶ Practice](sql_sandbox.html?slug=product-sales-analysis-iii) |
 | 2 | Rearrange Products Table | Easy | [▶ Practice](sql_sandbox.html?slug=rearrange-products-table) |
-| 4 | **Students Report By Geography** | Hard | [▶ Practice](sql_sandbox.html?slug=students-report-by-geography) |
-| 5 | **Dynamic Pivoting of a Table** | Hard | [▶ Practice](sql_sandbox.html?slug=dynamic-pivoting-of-a-table) |
+| 3 | **Students Report By Geography** | Hard | [▶ Practice](sql_sandbox.html?slug=students-report-by-geography) |
+| 4 | **Dynamic Pivoting of a Table** | Hard | [▶ Practice](sql_sandbox.html?slug=dynamic-pivoting-of-a-table) |
 
 ---
 
@@ -4108,10 +4290,14 @@ WITH monthly AS (
 SELECT
     c.yr, c.mo, c.revenue AS current_revenue,
     p.revenue AS prior_year_revenue,
-    ROUND(100.0 * (c.revenue - p.revenue) / p.revenue, 2) AS yoy_pct
+    ROUND(100.0 * (c.revenue - p.revenue) / NULLIF(p.revenue, 0), 2) AS yoy_pct
 FROM monthly c
 LEFT JOIN monthly p ON c.mo = p.mo AND c.yr = p.yr + 1;
 ```
+
+💡 **Two NULL cases to plan for:**
+1. **Prior year didn't exist** (LEFT JOIN miss) — `p.revenue IS NULL`, so `yoy_pct` comes out `NULL`. That's usually what you want; the earliest year legitimately has no comparison.
+2. **Prior year was zero** — `NULLIF(p.revenue, 0)` converts the division-by-zero into `NULL` instead of an error. Without it, Postgres and SQL Server raise, MySQL returns `NULL` implicitly — inconsistent across engines.
 
 ### Running Percentage / Cumulative Share
 
@@ -4170,6 +4356,8 @@ One of the most common analytics patterns — the engine-aware syntax (`LAG … 
 ### As-Of Join / Slowly Changing Dimension Type-2 Lookup
 
 🧠 *"Find the record that was effective on a given date."*
+
+📚 **SCD Type 2 = a dimension table that keeps a full history.** Instead of overwriting `product.price` when it changes, you insert a **new** row with `effective_from` set to today and mark the old row's `effective_to` as yesterday. Every order can then look up "which row was live when my order was placed?" — that's the as-of join.
 
 Classic when a dimension has `(effective_from, effective_to)` ranges (SCD Type 2) and you need "what was the price on this order date?":
 
@@ -4344,13 +4532,15 @@ Extract, manipulate, and compare temporal data. Dates are central to cohort anal
 | Current date | `CURDATE()` / `NOW()` | `CURRENT_DATE` / `NOW()` |
 | Extract year | `YEAR(d)` | `EXTRACT(YEAR FROM d)` |
 | Extract month | `MONTH(d)` | `EXTRACT(MONTH FROM d)` |
-| Extract day of week | `DAYOFWEEK(d)` (1=Sun) | `EXTRACT(DOW FROM d)` (0=Sun) |
+| Extract day of week | `DAYOFWEEK(d)` (1=Sun) | `EXTRACT(DOW FROM d)` (0=Sun) · ⚠️ MySQL `WEEKDAY(d)` returns 0=Mon |
 | Truncate to month | `DATE_FORMAT(d, '%Y-%m-01')` | `DATE_TRUNC('month', d)` |
 | Add interval | `DATE_ADD(d, INTERVAL 7 DAY)` | `d + INTERVAL '7 days'` |
 | Difference in days | `DATEDIFF(d1, d2)` | `d1 - d2` (returns integer) |
 | Difference in minutes / hours / etc. | `TIMESTAMPDIFF(unit, d1, d2)` | `EXTRACT(EPOCH FROM (d2 - d1)) / 60` |
 | Age between two dates | *(compute manually)* | `AGE(d2, d1)` → `INTERVAL` |
 | Format | `DATE_FORMAT(d, '%Y-%m')` | `TO_CHAR(d, 'YYYY-MM')` |
+
+⚠️ **Three different weekday conventions in one stack.** Writing `WHERE DAYOFWEEK(d) = 1` gets you *Sundays*, not Mondays. Always verify against a known date before shipping, or use the name-based form: `WHERE DAYNAME(d) = 'Monday'` / `TO_CHAR(d, 'Day') = 'Monday '` (note the trailing space — `'Day'` pads).
 
 ### Sub-Pattern A — Period Grouping
 
@@ -4382,6 +4572,10 @@ WHERE order_date >= '2024-03-01' AND order_date < '2024-04-01'
 
 ### Sub-Pattern C — Day-of-Week Analysis
 
+🧠 *"Are Fridays busier than Mondays? Group by weekday, not by date."*
+
+**Example ask:** *Show the total number of orders for each day of the week — Monday through Sunday — across all time.*
+
 ```sql
 SELECT
     DAYNAME(order_date) AS day_name,
@@ -4390,6 +4584,8 @@ FROM orders
 GROUP BY DAYOFWEEK(order_date), DAYNAME(order_date)
 ORDER BY DAYOFWEEK(order_date);
 ```
+
+💡 **Why group by BOTH `DAYOFWEEK` and `DAYNAME`?** `DAYNAME` gives you the readable label ("Monday"), but sorting alphabetically would put Friday first. `DAYOFWEEK` returns an integer `1..7` that sorts correctly. Grouping by both keeps the label in the output while letting you order by the number.
 
 ### Sub-Pattern D — Cohort / Retention Analysis
 
@@ -4410,6 +4606,8 @@ JOIN activity a ON f.user_id = a.user_id
                              AND f.cohort_date + INTERVAL 60 DAY
 GROUP BY cohort_month;
 ```
+
+💡 **Window vs point retention.** The `[+30, +60]` range counts users who were active *any day* in the second month after signup — classic **"Month-1 retained"** metric. If you wanted strict **"Day-30 retention"** — users who came back on exactly day 30 — change to `a.activity_date = f.cohort_date + INTERVAL 30 DAY`. Windows are forgiving (good for monthly/weekly cohorts), points are strict (good when the product has a specific re-engagement trigger). Know which one the interviewer is asking for before you write the query.
 
 ### Calendar Tables
 
@@ -4434,6 +4632,17 @@ FROM generate_series('2000-01-01'::date, '2030-12-31'::date, '1 day') dt;
 ### Time Zones
 
 ⚠️ `TIMESTAMP` vs `TIMESTAMPTZ` is the #1 production data-quality bug. Store in UTC, convert at display time.
+
+**Concrete example of what breaks.** Your server logs events in UTC. An analyst in SF runs:
+```sql
+SELECT DATE_TRUNC('day', event_ts) AS day, COUNT(*)
+FROM events GROUP BY 1;
+```
+An event at `2024-03-15 02:30 UTC` lands in the **March 15** bucket. But an SF user who generated that event experienced it at `2024-03-14 19:30` local time — from their perspective, it's a March 14 event. The daily-active-users chart shows a phantom spike at midnight UTC every day, and product managers filing tickets about "weird Tuesday spikes" are actually seeing a timezone artifact. Fix: convert **before** truncating:
+```sql
+SELECT DATE_TRUNC('day', event_ts AT TIME ZONE 'UTC' AT TIME ZONE 'America/Los_Angeles') AS local_day
+FROM events GROUP BY 1;
+```
 
 ```sql
 -- PostgreSQL / SQL Server
@@ -4509,6 +4718,10 @@ Combine string values — either column-level concatenation or aggregating multi
 
 ### Sub-Pattern A — Aggregate List per Group
 
+🧠 *"Flatten every value in a group into one comma-separated string."*
+
+**Example ask:** *For each department, produce a single cell listing all its employees' names in alphabetical order.*
+
 ```sql
 SELECT
     department,
@@ -4517,6 +4730,8 @@ FROM employees
 GROUP BY department;
 -- Output: "Engineering" → "Alice, Bob, Charlie"
 ```
+
+💡 **Dialect map.** MySQL uses `GROUP_CONCAT(... SEPARATOR ', ')`. Postgres uses `STRING_AGG(name, ', ' ORDER BY name)`. SQL Server and Oracle use `STRING_AGG` too. SQLite only has `GROUP_CONCAT(col, ', ')` — no `ORDER BY` inside it, so pre-sort via a subquery if you need order.
 
 ### Sub-Pattern B — Building Formatted Output
 
@@ -4579,10 +4794,12 @@ ORDER BY sell_date;
 
 ```sql
 -- LIKE: simple wildcards
+-- %   = zero or more characters
+-- _   = exactly one character (any character)
 WHERE name LIKE 'J%'       -- starts with J
 WHERE name LIKE '%son'     -- ends with son
-WHERE name LIKE '_o%'      -- second character is o
-WHERE name LIKE '%\_%'     -- contains literal underscore (escaped)
+WHERE name LIKE '_o%'      -- second character is o (any first char, then 'o', then anything)
+WHERE name LIKE '%\_%'     -- contains a literal underscore (escaped, because _ alone matches any single char)
 
 -- REGEXP / RLIKE (MySQL) / ~ (PostgreSQL)
 WHERE email REGEXP '^[a-zA-Z0-9]+@'           -- MySQL
@@ -4652,12 +4869,14 @@ the portable escape hatch. MySQL/PostgreSQL can use `REGEXP` / `~` directly.
 
 ### Extracting JSON Values
 
+🧠 **PostgreSQL arrow mnemonic:** `->` **keeps it JSON** (useful for chaining deeper), `->>` **strips to text** (useful as the final step). Same for the path-indexed variants `#>` and `#>>`. Use `->` when you're going to drill deeper (`data->'address'->>'city'`), `->>` when you want the leaf value out.
+
 ```sql
 -- PostgreSQL
 SELECT
-    data->>'name'           AS name,          -- text extraction
-    data->'address'->>'city' AS city,          -- nested extraction
-    (data->>'age')::int      AS age            -- extract & cast
+    data->>'name'            AS name,          -- text extraction (final value)
+    data->'address'->>'city' AS city,          -- chain: -> keeps JSON, ->> unwraps at end
+    (data->>'age')::int      AS age            -- ->> gives text, then cast
 FROM users;
 
 -- MySQL
@@ -4756,6 +4975,10 @@ CREATE INDEX idx_name_v ON users(name_v);
 
 🧠 **Rule:** If a function wraps the column, the index is bypassed.
 
+⚙️ **Why functions break indexes.** A B-tree index on `created_at` is sorted by the raw `created_at` values. When you write `WHERE YEAR(created_at) = 2024`, the engine would have to run `YEAR(...)` on every row to compare — because `YEAR(x)` ordering isn't the same as `x` ordering, the sorted index can't help it skip any rows. The equivalent range predicate `created_at >= '2024-01-01' AND created_at < '2025-01-01'` reads the index directly, jumps to the first matching row, and stops at the last — potentially O(log n) instead of O(n).
+
+💡 **The mental test:** "Is the left side of my comparison the literal, untouched column?" If yes, index can help. If it's wrapped in anything — `LOWER()`, `YEAR()`, `SUBSTR()`, `+ 1`, a cast — the index is dead (unless you built a *functional index* on that exact expression).
+
 | ❌ Non-SARGable (no index) | ✅ SARGable (uses index) |
 |---|---|
 | `WHERE YEAR(created_at) = 2024` | `WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01'` |
@@ -4793,15 +5016,17 @@ WHERE dept IN ('Sales', 'Engineering')
 
 ### Index Types
 
+💡 **Reality check:** You will use **B-tree** for 95% of queries in your career. The rest are specialty tools — know they exist so you recognize the right job, but don't reach for them without a reason. If you're ever unsure, pick B-tree.
+
 | Type | Best For | Example |
 |------|----------|---------|
 | **B-tree** (default) | Equality, range, ORDER BY, BETWEEN | `CREATE INDEX idx ON t(col);` |
-| **Hash** | Equality only (no range) | PostgreSQL: `CREATE INDEX idx ON t USING HASH(col);` |
-| **GIN** | Full-text search, JSONB containment, arrays | `CREATE INDEX idx ON t USING GIN(col);` |
+| **Hash** | Equality only (no range) — rarely faster than B-tree in practice | PostgreSQL: `CREATE INDEX idx ON t USING HASH(col);` |
+| **GIN** | Full-text search, JSONB containment, array membership | `CREATE INDEX idx ON t USING GIN(col);` |
 | **GiST** | Geometric/spatial, range types, nearest-neighbor | `CREATE INDEX idx ON t USING GIST(col);` |
-| **BRIN** | Very large tables with natural ordering (timestamps) | `CREATE INDEX idx ON t USING BRIN(created_at);` |
-| **Partial / Filtered** | Indexing only a slice of rows (e.g., `status = 'active'`) | PG: `CREATE INDEX … WHERE status='active';` · SQL Server: `CREATE INDEX … WHERE status='active';` |
-| **Expression / Functional** | Indexing a computed value (`LOWER(email)`, `JSON_VALUE(...)`) | PG: `CREATE INDEX ON users (LOWER(email));` · MySQL 8: generated column + B-tree · Oracle: function-based index |
+| **BRIN** | Very large append-only tables with natural ordering (timestamps, sensor data) — tiny index, approximate blocks | `CREATE INDEX idx ON t USING BRIN(created_at);` |
+| **Partial / Filtered** | Indexing only a slice of rows (e.g., `status = 'active'`) — shrinks the index, sometimes 10×+ | PG/SQL Server: `CREATE INDEX … WHERE status='active';` |
+| **Expression / Functional** | Indexing a computed value (`LOWER(email)`, `JSON_VALUE(...)`) — re-enables sargability for a specific function | PG: `CREATE INDEX ON users (LOWER(email));` · MySQL 8: generated column + B-tree · Oracle: function-based index |
 
 ### Composite (Multi-Column) Indexes
 
@@ -4813,6 +5038,8 @@ CREATE INDEX idx_dept_salary ON employees(dept_id, salary);
 - `WHERE dept_id = 5` ✅
 - `WHERE dept_id = 5 AND salary > 50000` ✅
 - `WHERE salary > 50000` ❌ (cannot skip leading column)
+
+⚙️ **Why the leftmost prefix rule exists.** A composite index `(dept_id, salary)` physically sorts rows by `dept_id` *first*, then by `salary` within each `dept_id`. Think of a phone book ordered by (last_name, first_name): great for "find everyone named Smith", great for "find John Smith" — but useless for "find everyone named John", because the Johns are scattered across every last-name section. The only way the engine can satisfy `WHERE salary > 50000` is a full scan. Rule: list columns in the index starting with the most-often-filtered (usually equality columns first, range columns last).
 
 ### Covering Indexes (Index-Only Scans)
 
@@ -5070,7 +5297,7 @@ COMMIT;  -- Only order 1 is committed
 |-------|-----------|-------------------|-------------|----------|
 | **READ UNCOMMITTED** | Possible | Possible | Possible | Almost never used |
 | **READ COMMITTED** | ❌ | Possible | Possible | PostgreSQL default |
-| **REPEATABLE READ** | ❌ | ❌ | Possible (MySQL: ❌) | MySQL/InnoDB default |
+| **REPEATABLE READ** | ❌ | ❌ | Possible (MySQL: ❌ — see note) | MySQL/InnoDB default |
 | **SERIALIZABLE** | ❌ | ❌ | ❌ | Financial transactions |
 
 ```sql
@@ -5088,6 +5315,8 @@ COMMIT;
 - **Non-Repeatable Read:** Re-reading a row gives different values (another txn committed an UPDATE)
 - **Phantom Read:** Re-running a query returns new rows (another txn committed an INSERT)
 
+💡 **Why MySQL REPEATABLE READ prevents phantoms even though the SQL standard says it shouldn't.** InnoDB implements REPEATABLE READ with **next-key locks** (a row lock plus a gap lock on the neighboring range), which blocks inserts into any gap you've already scanned. That's a deliberate over-delivery beyond the SQL standard — MySQL's REPEATABLE READ is effectively as strong as SERIALIZABLE for most read-heavy workloads. If you're porting queries between MySQL and Postgres, assume Postgres's REPEATABLE READ is weaker.
+
 ### SELECT FOR UPDATE (Row-Level Locking)
 
 ```sql
@@ -5100,6 +5329,8 @@ COMMIT;
 ```
 
 ⚠️ **Deadlock risk:** If Transaction A locks row 1 then requests row 2, while Transaction B locks row 2 then requests row 1, both deadlock. Always lock rows in a **consistent order**.
+
+💡 **Concrete rule:** lock rows in **ascending primary-key order**. If a transaction needs to update accounts 7 and 3, always write the `SELECT … FOR UPDATE` / `UPDATE` statements with id 3 first, id 7 second. Every transaction in the codebase following this single rule eliminates the entire class of cross-row deadlocks. The same idea applies across tables: pick a global alphabetical table order (`accounts` before `orders` before `shipments`) and lock in that order everywhere.
 
 ### `SKIP LOCKED` / `NOWAIT` — Work-Queue Patterns
 
@@ -5242,6 +5473,9 @@ CALL transfer_funds(1, 2, 100.00);
 
 ### Triggers (Brief Overview)
 
+💡 **Should you use triggers?** Usually **no**. Triggers are invisible to the application code — a new engineer reading an `UPDATE` statement has no idea that five other tables also changed, a Kafka message fired, and an audit row was written. Prefer putting business logic in application code (visible, testable, version-controlled) or in a **database transaction** that explicitly does the follow-up work. Reach for triggers only when: (a) you need the invariant enforced regardless of which client writes to the table, (b) you're doing pure bookkeeping (row-count maintenance, audit trails), or (c) you can't change the writing application. When you do use them, keep them short and never trigger network calls or cross-database writes from inside one.
+
+
 ```sql
 -- PostgreSQL: Log salary changes automatically
 CREATE OR REPLACE FUNCTION log_salary_change()
@@ -5279,6 +5513,8 @@ CREATE TRIGGER trg_salary_audit
 ---
 
 ## Pattern Selection Decision Tree
+
+🧠 **How to use this tree.** Read the problem. Find the line below whose right-hand side is closest to what the problem is literally asking for in English ("top N per group", "compare to previous row", etc.). That points you at the section with the pattern. If two branches seem to fit, your problem is probably a combination — use the first one for the outer shape and the second inside a CTE. When in doubt, start with `§2.2 CTEs` and decompose.
 
 ```
 What does the problem ask for?
@@ -5384,12 +5620,72 @@ Problems that showcase a single unusual technique worth internalising.
 > 12. Recursive CTEs (§4.3)
 >
 > **Phase D — Must-Do Hard Problems (final boss):**
-> 1. **Medians on grouped data** — odd/even handling via window + cumulative counts (§3.3)
-> 2. **Pivot-and-rank report tables** — conditional aggregation over ranked buckets (§4.4 + §3.1)
-> 3. **Human-traffic gaps & islands** — 3+ consecutive rows, id-vs-row-number trick (§4.1)
-> 4. **Multi-CTE retention funnels** — Day-1 vs Day-N cohort math (§5.1 + §2.2)
-> 5. **Running-total capacity constraints** — stop-when-threshold-hit with window sum (§3.3)
-> 6. **Weighted department-vs-company comparisons** — dual aggregate with HAVING filter (§2.1)
+> 1. [**Median Given Frequency of Numbers**](sql_sandbox.html?slug=median-given-frequency-of-numbers) — odd/even handling via window + cumulative counts (§3.3)
+> 2. [**Department Top Three Salaries**](sql_sandbox.html?slug=department-top-three-salaries) — DENSE_RANK per partition, Top-N pattern (§3.1)
+> 3. [**Human Traffic of Stadium**](sql_sandbox.html?slug=human-traffic-of-stadium) — 3+ consecutive rows, id-vs-row-number trick (§4.1)
+> 4. [**Find Cumulative Salary of an Employee**](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) — multi-CTE window math with boundary handling (§3.3 + §2.2)
+> 5. [**Last Person to Fit in the Bus**](sql_sandbox.html?slug=last-person-to-fit-in-the-bus) — running sum with a ≤ capacity stop-condition (§3.3)
+> 6. [**Students Report By Geography**](sql_sandbox.html?slug=students-report-by-geography) — conditional aggregation across ranked buckets (§4.4 + §3.1)
+> 7. [**Consecutive Transactions with Increasing Amounts**](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) — multi-condition gaps & islands (§4.1)
+
+---
+
+---
+
+## 📖 Glossary
+
+Every term used in this atlas, defined in one line with a pointer to where it's taught.
+
+| Term | Meaning | See |
+|---|---|---|
+| **Anti-join** | "Rows in A that have **no** match in B." Typically implemented with `NOT EXISTS` or `LEFT JOIN … WHERE b.id IS NULL`. | §2.4 |
+| **As-of join** | Given an event table and a dimension table with effective-from/to ranges, return the dimension row that was valid **as of** the event time. | §4.5 |
+| **B-tree index** | The default index shape: balanced sorted tree. Handles equality, range, and ordering. | §6.2 |
+| **Calendar table** | A persistent table with one row per date (plus `is_weekend`, `is_holiday`, etc.) used to fill date gaps in reports. | §5.1 |
+| **CTE** | **Common Table Expression** — a named subquery declared with `WITH`. Think "inline temporary result." | §2.2 |
+| **Cardinality** | How many distinct values a column has. Low cardinality (`is_active`) rarely benefits from an index. | §6.2 |
+| **Composite index** | An index on multiple columns in a specific order. Governed by the leftmost-prefix rule. | §6.2 |
+| **Correlated subquery** | A subquery that references a column from the outer query — conceptually re-evaluated per outer row. | §4.5 |
+| **Covering index** | An index that contains every column the query needs, so the engine never touches the base table. | §6.2 |
+| **Cross join / Cartesian product** | Every row on the left paired with every row on the right. Usually a bug. | §2.6 |
+| **Dense rank** | Ranking function where ties share a rank but the next distinct value continues **without gaps** (1,1,2,3). | §3.1 |
+| **Exploding join** | When a join condition matches more rows than expected, multiplying row counts — silent killer of aggregates. | §2.6 |
+| **Filtered / partial index** | An index over only a subset of rows (`WHERE status = 'active'`). Smaller and faster. | §6.2 |
+| **Functional / expression index** | An index on a computed expression (`LOWER(email)`) rather than a raw column. Re-enables sargability for that expression. | §6.2 |
+| **Gaps & Islands** | Family of patterns for finding contiguous runs or missing ranges in ordered data. The row-difference trick is canonical. | §4.1 |
+| **Hard-tier problem** | LeetCode/interview problem usually solvable only with 2+ combined patterns (e.g., window + CTE + gaps-and-islands). | Hero |
+| **Idempotent** | An operation that produces the same result if applied once or many times. UPSERTs are idempotent; naïve INSERTs are not. | §6.4 |
+| **Island** | A maximal run of consecutive values in an ordered sequence. Opposite of a gap. | §4.1 |
+| **Keyset pagination** | Pagination by `WHERE id > :last_id` instead of `OFFSET N`. Constant-time per page. | §6.3 |
+| **LAG / LEAD** | Window functions returning the value from a row `N` positions back (LAG) or forward (LEAD) in the ordered partition. | §3.2 |
+| **LATERAL / CROSS APPLY** | FROM-clause subquery that can reference columns from earlier tables in the same FROM. | §2.6 |
+| **LOCF** | **Last-Observation-Carried-Forward**. Fill nulls with the most recent non-null value. | §3.2, §4.5 |
+| **Materialized view** | A view whose result is physically stored and refreshed on demand. Read-optimal, write-stale. | §6.6 |
+| **Merge / UPSERT** | "Insert if missing, update if present" in a single atomic statement. Syntax varies wildly by engine. | §6.4 |
+| **Natural key** | A column that's already meaningful to the business (`email`, `isbn`). Contrast with surrogate key. | §1.3 |
+| **NOT EXISTS** | NULL-safe equivalent to `NOT IN` for anti-joins. Preferred default. | §0.2, §2.4 |
+| **ORDER BY + LIMIT tiebreaker** | Always add a unique column to `ORDER BY` so `LIMIT` returns deterministic rows. | §6.3 |
+| **Ordered-set aggregate** | An aggregate (e.g., `PERCENTILE_CONT`) whose result depends on input sort order — uses `WITHIN GROUP (ORDER BY …)`. | §3.4 |
+| **Partition (window)** | The subset of rows a window function operates over, defined by `PARTITION BY`. | §3.1 |
+| **Percentile (CONT vs DISC)** | CONT interpolates between the two nearest rows; DISC picks an actual row. | §3.4 |
+| **Phantom read** | A row that appears on re-query because another transaction committed an INSERT in the range. | §6.5 |
+| **Pivot / unpivot** | Turn row values into column headers (pivot) or the reverse (unpivot). | §4.4 |
+| **QUALIFY** | Clause that lets you filter on a window function directly, without a CTE wrapper. Snowflake/BigQuery/Databricks. | §3.4 |
+| **Rank (vs Dense Rank vs Row Number)** | Three ranking functions differing in how they handle ties. | §3.1 |
+| **Recursive CTE** | A CTE that references itself — used for hierarchies, date spines, graph walks. | §4.3 |
+| **Sargable** | "Search-ARG-able" — a predicate structured so an index can serve it. | §6.1 |
+| **SCD Type 2** | Slowly Changing Dimension pattern: keep history by inserting new rows with effective-from/to ranges. | §4.5 |
+| **Self-join** | Joining a table to itself (aliased) to compare rows within the same table. | §2.3 |
+| **Semi-join** | "Rows in A that **have** a match in B, but only A's columns are returned." Implemented with `EXISTS` or `IN`. | §2.5 |
+| **Sessionization** | Grouping events into sessions based on time gaps (e.g., >30 min idle = new session). | §4.5 |
+| **Side effect (of a join)** | When a join changes the row count of the "main" table unexpectedly — usually caused by a non-unique join key. | §2.6 |
+| **SKIP LOCKED** | Lock modifier that silently skips already-locked rows — the standard way to build SQL-backed job queues. | §6.5 |
+| **Subquery** | A SELECT inside another query. Scalar (one cell), row (one row), or table (derived table). | §2.2 |
+| **Surrogate key** | An artificial PK (usually `id SERIAL` or UUID) that has no business meaning. Contrast with natural key. | §1.3 |
+| **Three-valued logic** | SQL's `TRUE / FALSE / UNKNOWN`. Any comparison with NULL yields UNKNOWN. | §0.2 |
+| **Transitive closure** | The set of all reachable descendants/ancestors in a graph. Computed with a recursive CTE. | §4.3 |
+| **Window function** | A function computed **over a set of rows** (the window) without collapsing them. `OVER (…)` defines the window. | §3.1–§3.5 |
+| **WITHIN GROUP** | The clause that attaches an `ORDER BY` to an ordered-set aggregate (e.g., `PERCENTILE_CONT`). | §3.4 |
 
 ---
 

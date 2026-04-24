@@ -52,7 +52,13 @@ sandbox_body = re.sub(r"<header\b.*?</header>", "", sandbox_body, count=1, flags
 # ---------------------------------------------------------------------------
 # 2. Scope-prefix sandbox CSS so it lives under #sandboxOverlay.
 # ---------------------------------------------------------------------------
+_CSS_COMMENT_RE = re.compile(r'/\*.*?\*/', re.DOTALL)
+
 def scope_selectors(css: str, scope: str) -> str:
+    # Strip CSS comments first — otherwise a `/* ... */` before an @media
+    # rule ends up inside `buf`, the selector_list no longer starts with '@',
+    # and the at-rule branch is skipped (leaving selectors un-scoped).
+    css = _CSS_COMMENT_RE.sub('', css)
     result = []
     i = 0
     n = len(css)
