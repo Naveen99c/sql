@@ -1915,6 +1915,8 @@ WHERE NOT EXISTS (
 
 💡 **Rule of thumb:** `NOT EXISTS` is the default choice for "rows without a match." Reach for `NOT IN` only when you've personally verified the subquery can never produce a `NULL`.
 
+🔗 **Feel the bug yourself:** [▶ Products Never Purchased (NULL-Trap Edition)](sql_sandbox.html?slug=products-never-purchased) — one `NULL` gift-card order in the subquery silently nukes your whole result. Write the naïve `NOT IN` first, watch it fail, then fix it with `NOT EXISTS`.
+
 💡 **Why does `UNION` treat `NULL = NULL` as equal for deduplication, when `=` does not?** Different operations have different notions of equality: `=` is *truth-valued* (three-valued logic), but `UNION`, `GROUP BY`, `DISTINCT`, and `PARTITION BY` use *structural* equality — "do these tuples look identical?" — and NULL looks identical to NULL. The SQL standard picked structural equality for grouping because the alternative (never grouping NULLs together) would produce one row per NULL, which is almost never useful.
 
 ### NULL-Handling Functions
@@ -2751,6 +2753,7 @@ WHERE NOT EXISTS (
 | 3 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
 | 4 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) |
 | 5 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) — self-join to list friend-of-friend candidates, anti-join to exclude people already followed. |
+| 6 | **Products Never Purchased (NULL-Trap Edition)** | Medium | [▶ Practice](sql_sandbox.html?slug=products-never-purchased) — the canonical `NOT IN` vs `NOT EXISTS` disaster. One `NULL` gift-card order in the subquery returns zero rows from a naïve `NOT IN`. See §0.2. |
 
 ---
 
@@ -2907,6 +2910,12 @@ FROM orders o
 LEFT JOIN item_tot i ON i.order_id = o.id
 LEFT JOIN pay_tot  p ON p.order_id = o.id;
 ```
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | **Latest Two Orders Per Customer** | Medium | [▶ Practice](sql_sandbox.html?slug=latest-two-orders-per-customer) — the canonical LATERAL / CROSS APPLY shape: multiple columns *and* multiple rows per parent. Solve it two ways — once with `ROW_NUMBER()` (SQLite-safe) and once with `LATERAL` (Postgres/SQL Server mental model). |
 
 ---
 
