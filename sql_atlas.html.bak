@@ -5344,18 +5344,18 @@ GROUP BY DATE_FORMAT(order_date, '%Y-%m');
 
 💡 **The 1.0 trick:** multiplying by `100.0` (not `100`) forces floating-point division — integer math would truncate `3 / 10` to `0`. `AVG(status = 'returned')` is an even shorter equivalent in Postgres/SQLite.
 
-### 📝 Sample Problem — Duplicate Emails
+### 📝 Sample Problem — Frequently Reviewed Products
 
-> Table `Person(id, email)`. Find all duplicate emails.
+> Table `Reviews(review_id, product_id, user_id, rating)`. Find products that have been reviewed by **at least 3 distinct users**.
 
 ```sql
-SELECT email
-FROM Person
-GROUP BY email
-HAVING COUNT(*) > 1;
+SELECT product_id
+FROM Reviews
+GROUP BY product_id
+HAVING COUNT(DISTINCT user_id) >= 3;
 ```
 
-**Why GROUP BY + HAVING?** GROUP BY collapses all rows with the same email; HAVING filters to only groups with more than one row.
+**Why GROUP BY + HAVING?** GROUP BY collapses rows by `product_id`; HAVING then filters those groups using an aggregate. Note `COUNT(DISTINCT user_id)` — the same user reviewing the same product twice should count once. Use `COUNT(*)` only when every row is guaranteed to be a unique reviewer.
 
 <div class="quiz" data-quiz-id="q-having-vs-where">
   <div class="quiz-kind">Scenario</div>
@@ -5565,23 +5565,30 @@ FROM ranked
 WHERE rnk = 1;
 ```
 
-### 📝 Sample Problem — Exchange Seats
+### 📝 Sample Problem — Highest-Spending Day Per Customer
 
-> Table `Seat(id, student)`. Swap every two consecutive students' seats. If odd number of students, last one stays.
+> Table `Orders(order_id, customer_id, order_date, amount)`. For each customer, return the date on which they spent the most (one row per customer; on ties, return the earliest date).
 
 ```sql
-SELECT
-    CASE
-        WHEN id % 2 = 1 AND id = (SELECT MAX(id) FROM Seat) THEN id
-        WHEN id % 2 = 1 THEN id + 1
-        ELSE id - 1
-    END AS id,
-    student
-FROM Seat
-ORDER BY id;
+WITH daily AS (                                  -- Step 1: collapse to one row per (customer, day)
+    SELECT customer_id, order_date, SUM(amount) AS day_total
+    FROM Orders
+    GROUP BY customer_id, order_date
+),
+peak AS (                                        -- Step 2: each customer's max day_total
+    SELECT customer_id, MAX(day_total) AS peak_total
+    FROM daily
+    GROUP BY customer_id
+)
+SELECT d.customer_id, MIN(d.order_date) AS top_day, d.day_total
+FROM daily d
+JOIN peak  p ON d.customer_id = p.customer_id
+            AND d.day_total   = p.peak_total
+GROUP BY d.customer_id, d.day_total
+ORDER BY d.customer_id;
 ```
 
-**Intuition:** Odd IDs get +1 (swap with next), even IDs get -1 (swap with previous). The last odd ID (no partner) stays put.
+**Why a CTE pipeline?** Each CTE is one cleanly-named stage: aggregate → find-the-max → re-join to recover the date. The same answer can be written with a correlated subquery (`WHERE day_total = (SELECT MAX(...) WHERE customer_id = d.customer_id)`), but the CTE form reads top-to-bottom like a recipe and is what most reviewers prefer.
 
 <div class="quiz" data-quiz-id="q-cte-vs-subquery">
   <div class="quiz-kind">Scenario</div>
@@ -5705,25 +5712,25 @@ JOIN windows w
 
 ⚠️ Range joins cannot use simple hash/equi-join plans — they fall back to nested-loop or merge. Ensure the range column is indexed on at least one side, and prefer half-open intervals (`>= min AND < max`) to avoid double-counting boundaries.
 
-### 📝 Sample Problem — Trips and Users
+### 📝 Sample Problem — Tournament Match Cancellation Rate
 
-> Tables `Trips(id, client_id, driver_id, status, request_date)`, `Users(users_id, banned, role)`. Find the cancellation rate for unbanned users between '2013-10-01' and '2013-10-03'.
+> Tables `Matches(match_id, host_id, guest_id, status, match_date)`, `Players(player_id, suspended, region)`. For each day in March 2024, compute the **fraction of matches that were not played** (status ≠ 'played'), counting only matches where **both** the host and the guest were *not suspended*.
 
 ```sql
 SELECT
-    t.request_date AS Day,
+    m.match_date AS day,
     ROUND(
-        SUM(CASE WHEN t.status != 'completed' THEN 1 ELSE 0 END) / COUNT(*),
+        AVG(CASE WHEN m.status <> 'played' THEN 1.0 ELSE 0.0 END),
         2
-    ) AS 'Cancellation Rate'
-FROM Trips t
-JOIN Users c ON t.client_id = c.users_id AND c.banned = 'No'
-JOIN Users d ON t.driver_id = d.users_id AND d.banned = 'No'
-WHERE t.request_date BETWEEN '2013-10-01' AND '2013-10-03'
-GROUP BY t.request_date;
+    ) AS cancellation_rate
+FROM Matches m
+JOIN Players h ON m.host_id  = h.player_id AND h.suspended = 'No'
+JOIN Players g ON m.guest_id = g.player_id AND g.suspended = 'No'
+WHERE m.match_date BETWEEN '2024-03-01' AND '2024-03-31'
+GROUP BY m.match_date;
 ```
 
-**Why ON for banned?** We filter banned users during the join so only trips with unbanned clients AND drivers remain.
+**Why filter `suspended` inside `ON`?** The same `Players` table is joined twice — once as host, once as guest. Putting `suspended = 'No'` in the `ON` clause keeps the filter scoped to *that side* of the join. Moving it to a single `WHERE` clause would still work for an INNER JOIN, but reads less clearly when the same table is aliased multiple times. **Why `AVG(CASE …)` instead of `SUM/COUNT`?** It's the same number with one fewer moving part — the average of a 0/1 column *is* the fraction of 1s.
 
 <div class="quiz" data-quiz-id="q-on-vs-where-outer">
   <div class="quiz-kind">Scenario</div>
@@ -5834,24 +5841,26 @@ HAVING COUNT(o.id) = 0;
 
 💡 **General rule:** Use `NOT EXISTS` when performance matters, `LEFT JOIN + IS NULL` for readability, avoid `NOT IN` unless the column is NOT NULL.
 
-### 📝 Sample Problem — Customers Who Never Order
+### 📝 Sample Problem — Books Never Borrowed
 
-> Tables: `Customers(id, name)`, `Orders(id, customerId)`. Find customers who never placed an order.
+> Tables: `Books(book_id, title)`, `Loans(loan_id, book_id, borrower_id, loan_date)`. Find every book that **has never been borrowed**.
 
 ```sql
--- Method 1: LEFT JOIN
-SELECT c.name AS Customers
-FROM Customers c
-LEFT JOIN Orders o ON c.id = o.customerId
-WHERE o.id IS NULL;
+-- Method 1: LEFT JOIN + IS NULL
+SELECT b.title
+FROM Books b
+LEFT JOIN Loans l ON l.book_id = b.book_id
+WHERE l.loan_id IS NULL;
 
--- Method 2: NOT EXISTS
-SELECT name AS Customers
-FROM Customers c
+-- Method 2: NOT EXISTS — usually the fastest on a large Loans table
+SELECT b.title
+FROM Books b
 WHERE NOT EXISTS (
-    SELECT 1 FROM Orders o WHERE o.customerId = c.id
+    SELECT 1 FROM Loans l WHERE l.book_id = b.book_id
 );
 ```
+
+**Why two methods?** They return identical rows. `LEFT JOIN + IS NULL` reads naturally ("join everything, keep only the non-matches"). `NOT EXISTS` short-circuits as soon as one matching loan is found, which often beats the join on a large `Loans` table — and unlike `NOT IN`, it's safe even if `book_id` can be NULL in the loans table.
 
 ### 🔗 Practice Problems
 
@@ -6318,29 +6327,36 @@ LIMIT 1 OFFSET 1;         -- 2nd distinct salary
 
  ("Second Highest Salary") is the canonical trick-question here — the expected answer wraps the `LIMIT` form in a subquery so the missing case returns `NULL` instead of zero rows.
 
-### 📝 Sample Problem — Department Top 3 Salaries
+### 📝 Sample Problem — Top 3 Selling Products Per Category
 
-> Table: `Employee(id, name, salary, departmentId)`, `Department(id, name)`. Find employees whose salary is in the top 3 **unique** salaries of their department.
+> Tables: `Products(product_id, name, category_id)`, `Sales(product_id, units_sold)`, `Categories(category_id, category_name)`. For each category, list every product whose total units sold is among the **top 3 distinct totals** in that category.
 
 ```sql
-WITH ranked AS (
+WITH totals AS (
+    SELECT p.product_id, p.name, c.category_name, SUM(s.units_sold) AS units
+    FROM Products    p
+    JOIN Sales       s ON s.product_id  = p.product_id
+    JOIN Categories  c ON c.category_id = p.category_id
+    GROUP BY p.product_id, p.name, c.category_name
+),
+ranked AS (
     SELECT
-        d.name  AS Department,
-        e.name  AS Employee,
-        e.salary AS Salary,
+        category_name,
+        name,
+        units,
         DENSE_RANK() OVER (
-            PARTITION BY e.departmentId
-            ORDER BY e.salary DESC
+            PARTITION BY category_name
+            ORDER BY units DESC
         ) AS rnk
-    FROM Employee e
-    JOIN Department d ON e.departmentId = d.id
+    FROM totals
 )
-SELECT Department, Employee, Salary
+SELECT category_name, name, units
 FROM ranked
-WHERE rnk <= 3;
+WHERE rnk <= 3
+ORDER BY category_name, units DESC;
 ```
 
-**Why DENSE_RANK?** "Top 3 unique salaries" — if two people earn 100k, they both rank 1, and rank 2 goes to the next distinct salary. `RANK()` would skip rank 2.
+**Why DENSE_RANK?** "Top 3 *distinct* totals." If two products tie at 500 units they both rank 1, and the next product down ranks 2 — not 3. `RANK()` would skip rank 2 (giving 1, 1, 3, 4…); `ROW_NUMBER()` would arbitrarily pick a winner among ties. **Why aggregate first in `totals`?** The window function ranks rows it's given — collapse to one row per product *before* ranking, otherwise a product with many sales rows would pollute the rank.
 
 ### 🔗 Practice Problems
 
@@ -6468,24 +6484,27 @@ FROM (
 WHERE t1.num = t1.prev_num AND t1.num = t1.next_num;
 ```
 
-### 📝 Sample Problem — Rising Temperature
+### 📝 Sample Problem — Days With a Stock-Price Jump
 
-> Table `Weather(id, recordDate, temperature)`. Find all dates where the temperature was higher than the previous day.
+> Table `StockPrice(ticker, trade_date, close_price)`. For ticker `'ACME'`, list every trading date whose close price was at least **5 % higher** than the previous *trading* day's close.
 
 ```sql
-SELECT id
+SELECT trade_date, close_price, prev_close
 FROM (
-    SELECT id, temperature,
-           LAG(temperature) OVER (ORDER BY recordDate) AS prev_temp,
-           LAG(recordDate)  OVER (ORDER BY recordDate) AS prev_date,
-           recordDate
-    FROM Weather
+    SELECT
+        ticker,
+        trade_date,
+        close_price,
+        LAG(close_price) OVER (PARTITION BY ticker ORDER BY trade_date) AS prev_close
+    FROM StockPrice
+    WHERE ticker = 'ACME'
 ) t
-WHERE temperature > prev_temp
-  AND DATEDIFF(recordDate, prev_date) = 1;   -- ensure truly consecutive days
+WHERE prev_close IS NOT NULL                       -- skip the very first row (no previous)
+  AND close_price >= 1.05 * prev_close
+ORDER BY trade_date;
 ```
 
-**Why check DATEDIFF?** There might be missing dates; LAG gives the previous *row*, not the previous *day*.
+**Why is no `DATEDIFF` check needed here?** Stock data already has *one row per trading day* — the table simply skips weekends. So "previous row" *is* "previous trading day," which is exactly what we want. Compare with daily weather data, where missing days are anomalies and the LAG row may not be the day before. **The LAG idiom in one breath:** sort the partition by date, look one row back, compare. If you ever needed the day-2-before, pass an offset: `LAG(close_price, 2) OVER (...)`.
 
 <div class="quiz" data-quiz-id="q-lag-first-row">
   <div class="quiz-kind">Guess the output</div>
@@ -6616,24 +6635,30 @@ FROM stock_prices;
 
 💡 **The `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` frame is the running-window idiom.** Swap `MAX` → `SUM` for a running total, or `MIN` for a running low-water mark. Without the frame clause, many engines default to `RANGE` and give subtly different results on ties.
 
-### 📝 Sample Problem — Last Person to Fit in the Bus
+### 📝 Sample Problem — Books That Fit in the Shelf
 
-> Table `Queue(person_id, person_name, weight, turn)`. Bus limit = 1000 kg. Find the last person who can board.
+> Table `Shelf(position, title, thickness_cm)`. The shelf is **120 cm** wide. Books are placed left-to-right by `position`. Return the title of the **last book** that fully fits before the shelf runs out of space.
 
 ```sql
 WITH cumulative AS (
-    SELECT *,
-           SUM(weight) OVER (ORDER BY turn ROWS UNBOUNDED PRECEDING) AS total
-    FROM Queue
+    SELECT
+        position,
+        title,
+        thickness_cm,
+        SUM(thickness_cm) OVER (
+            ORDER BY position
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS used_cm
+    FROM Shelf
 )
-SELECT person_name
+SELECT title
 FROM cumulative
-WHERE total <= 1000
-ORDER BY turn DESC
+WHERE used_cm <= 120
+ORDER BY position DESC
 LIMIT 1;
 ```
 
-**Intuition:** Running sum of weight ordered by turn. The last person whose cumulative weight ≤ 1000 is the answer.
+**Intuition:** the running sum tells you, *for every book in turn*, how much shelf space has been consumed up to and including that book. Filter to the rows where the total still fits (`used_cm <= 120`), and the last one in `position` order is the final book that fits. **Why `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`?** Without an explicit frame, the engine defaults to `RANGE` — and if two books shared the same `position` value, both would receive the same running total and you'd lose the row-by-row accumulation. Always say `ROWS` for running sums.
 
 ### Sub-Pattern D — Rolling N-Day Distinct Counts
 
@@ -7053,29 +7078,34 @@ WHERE gap_end_next - gap_start_prev > 1;
 
 **Use case:** finding missing IDs, missing business days, missing sequence numbers in a receipt stream. Symmetrical to the islands case — an "island of absence" between every two adjacent present values.
 
-### 📝 Sample Problem — Consecutive Numbers
+### 📝 Sample Problem — Three-in-a-Row Wins
 
-> Table `Logs(id, num)`. Find all numbers that appear at least three times consecutively.
+> Table `GameResult(game_no, team_id, outcome)` where `outcome` is `'W'`, `'L'`, or `'D'`. For each team, find every team that won **three games in a row** (i.e. three consecutive `game_no` values where outcome = `'W'`).
 
 ```sql
-SELECT DISTINCT l.num AS ConsecutiveNums
-FROM Logs l
-JOIN Logs l2 ON l.id = l2.id - 1 AND l.num = l2.num
-JOIN Logs l3 ON l.id = l3.id - 2 AND l.num = l3.num;
+SELECT DISTINCT g1.team_id
+FROM GameResult g1
+JOIN GameResult g2 ON g2.team_id = g1.team_id AND g2.game_no = g1.game_no + 1
+JOIN GameResult g3 ON g3.team_id = g1.team_id AND g3.game_no = g1.game_no + 2
+WHERE g1.outcome = 'W' AND g2.outcome = 'W' AND g3.outcome = 'W';
 ```
 
-Alternative with LAG/LEAD:
+Same idea with `LAG` / `LEAD` (often more efficient because it avoids the triple self-join):
 
 ```sql
-SELECT DISTINCT num AS ConsecutiveNums
+SELECT DISTINCT team_id
 FROM (
-    SELECT num,
-           LAG(num)  OVER (ORDER BY id) AS prev,
-           LEAD(num) OVER (ORDER BY id) AS next
-    FROM Logs
+    SELECT
+        team_id,
+        outcome,
+        LAG(outcome)  OVER (PARTITION BY team_id ORDER BY game_no) AS prev_outcome,
+        LEAD(outcome) OVER (PARTITION BY team_id ORDER BY game_no) AS next_outcome
+    FROM GameResult
 ) t
-WHERE num = prev AND num = next;
+WHERE outcome = 'W' AND prev_outcome = 'W' AND next_outcome = 'W';
 ```
+
+**Why both forms?** The self-join version is the old textbook recipe — it works on every engine, including ones without window functions. The LAG/LEAD form handles N-in-a-row with a single pass per team and scales much better as the table grows; for `N` consecutive, you'd add `LAG(outcome, 2)`, `LAG(outcome, 3)`, … rather than another self-join.
 
 ### 🔗 Practice Problems
 
@@ -8101,19 +8131,22 @@ SELECT GROUP_CONCAT(
 FROM terms;
 ```
 
-### 📝 Sample Problem — Group Sold Products by Date
+### 📝 Sample Problem — Authors and Their Books
 
-> Table `Activities(sell_date, product)`. For each sell_date, list the number of distinct products and their names (sorted, comma-separated).
+> Tables: `Authors(author_id, author_name)`, `Books(book_id, author_id, title)`. For each author, return the number of books they've written and the **sorted, comma-separated list of titles**.
 
 ```sql
 SELECT
-    sell_date,
-    COUNT(DISTINCT product) AS num_sold,
-    GROUP_CONCAT(DISTINCT product ORDER BY product SEPARATOR ',') AS products
-FROM Activities
-GROUP BY sell_date
-ORDER BY sell_date;
+    a.author_name,
+    COUNT(b.book_id) AS book_count,
+    GROUP_CONCAT(b.title ORDER BY b.title SEPARATOR ', ') AS titles
+FROM Authors a
+LEFT JOIN Books b ON b.author_id = a.author_id
+GROUP BY a.author_id, a.author_name
+ORDER BY a.author_name;
 ```
+
+**Why `LEFT JOIN`?** An author with zero books should still appear (with `book_count = 0` and `titles = NULL`); an `INNER JOIN` would silently drop them. **`ORDER BY` *inside* `GROUP_CONCAT`** controls the order of items *within* the concatenated string — separate from the outer `ORDER BY a.author_name` that orders the rows themselves. **Engine note:** the syntax shown is MySQL. PostgreSQL / SQL Server use `STRING_AGG(b.title, ', ' ORDER BY b.title)`; Oracle uses `LISTAGG`. Same idea, three different keywords.
 
 <div class="quiz" data-quiz-id="q-group-concat-engine">
   <div class="quiz-kind">Scenario</div>
