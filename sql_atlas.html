@@ -4044,7 +4044,8 @@ function paintPillStatuses(root = document) {
 // Tags are derived from the section TITLE only (not body), with word-bounded
 // regexes — body-text matching produced too many false positives (a section
 // briefly mentioning "time" or "subquery" got DATE / CTE chips even when the
-// section's main topic was unrelated).
+// section's main topic was unrelated). Every section title in the atlas hits
+// at least one rule below; if you add a new section, add a rule too.
 const PATTERN_RULES = [
   [/\banti[- ]?join/i,                                                 "Anti-Join"],
   [/\bsemi[- ]?join/i,                                                 "Semi-Join"],
@@ -4057,13 +4058,15 @@ const PATTERN_RULES = [
   [/year[- ]?over[- ]?year|\byoy\b|month[- ]?over/i,                   "YoY"],
   [/\bsubquer|\bctes?\b/i,                                             "CTE"],
   [/\bgroup\s*by\b|\bhaving\b/i,                                       "Group-By"],
-  [/\bnull\b/i,                                                        "NULL"],
+  [/\bnull\b|\bthree[- ]valued/i,                                      "NULL"],
   [/\bcast(ing)?\b/i,                                                  "Casting"],
   [/\bdates?\b|\bdatetime\b|\btimestamp\b/i,                           "Date"],
   [/\bjson\b|\barrays?\b/i,                                            "JSON/Array"],
-  [/\b(performance|indexes?|explain|sarg)/i,                           "Performance"],
+  [/\b(performance|sarg)/i,                                            "Performance"],
+  [/\b(indexes?|explain)\b/i,                                          "Indexing"],
   [/\b(dml|delete|update|insert|merge)\b/i,                            "DML"],
-  [/\b(procedures?|triggers?|views?|stored\s*proc|server[- ]side)\b/i, "Server-Side"],
+  [/\b(procedures?|triggers?|stored\s*proc|server[- ]side)\b/i,        "Server-Side"],
+  [/\bviews?\b/i,                                                      "Views"],
   [/\btransactions?\b|\bisolation\b/i,                                 "Transactions"],
   [/\bstrings?\b|\bconcat\b|\bgroup_concat\b/i,                        "String"],
   [/\bset[- ]?operations?\b|\bunion\b|\bintersect\b|\bexcept\b/i,      "Set Ops"],
@@ -4072,16 +4075,36 @@ const PATTERN_RULES = [
   [/\ba\/b\b|\bab\s*test|\blift\b/i,                                   "A/B Test"],
   [/\bscd\b|\bslowly\s*changing/i,                                     "SCD-2"],
   [/\bcase\b/i,                                                        "CASE"],
-  [/\bschemas?\b|\bnormali[sz]ation\b|\bconstraints?\b/i,              "Schema"],
+  [/\bschemas?\b|\bnormali[sz]ation\b|\bconstraints?\b|\bmodel(l)?ing\b/i, "Schema"],
   [/\bgrouping\s*sets|\brollup\b|\bcube\b/i,                           "Grouping Sets"],
+  // —— catch-all rules so every section gets at least one tag ——
+  [/\b(joins?|join\s*types?|join\s*semantics)\b/i,                     "Joins"],
+  [/\b(logical\s*order|execution\s*order|order\s*of\s*execution)\b/i,  "Execution Order"],
+  [/\b(between|distinct|operators?|precedence|parenthes)\b/i,          "Operators"],
+  [/\b(data\s*type|datatype)s?\b|\btype\s*system\b|\btype\s*manipulation\b/i, "Data Types"],
+  [/\b(engines?|mysql|postgres|sqlite|sql\s*server|database)\b/i,      "Engines"],
+  [/\bexists\b|\bin\s+vs\b|\bvs\s+in\b/i,                              "EXISTS/IN"],
+  [/\b(table\s*value|series\s*generation|values\s*clause|table\s*constructor)\b/i, "VALUES"],
+  [/\badvanced\b/i,                                                    "Advanced"],
+  [/\border\s*by\b|\blimit\b/i,                                        "ORDER BY/LIMIT"],
+  [/\bmental\s*model|\bfundamentals?\b/i,                              "Fundamentals"],
+  [/\bcore\b/i,                                                        "Core Patterns"],
+  [/\btemporary?\s*tables?\b|\btemp\s*tables?\b/i,                     "Temp Tables"],
+  [/\bquick\s*reference\b|\breference\b/i,                             "Reference"],
 ];
 function detectPatterns(text) {
   const hits = new Set();
   for (const [re, label] of PATTERN_RULES) {
     if (re.test(text)) hits.add(label);
   }
-  // Recursive CTE implies CTE — keep only the more specific tag.
+  // Specificity de-dup: keep the more precise label, drop the generic one.
   if (hits.has("Recursive CTE")) hits.delete("CTE");
+  if (hits.has("Self-Join") || hits.has("Anti-Join") || hits.has("Semi-Join")) hits.delete("Joins");
+  // "Advanced" is a tier marker, not a topic — only useful when no real topic
+  // was matched. If any concrete topic was found, drop it.
+  if (hits.size > 1) hits.delete("Advanced");
+  // "Core Patterns" likewise — drop if any specific topic matched.
+  if (hits.size > 1) hits.delete("Core Patterns");
   return [...hits];
 }
 
