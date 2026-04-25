@@ -4041,30 +4041,47 @@ function paintPillStatuses(root = document) {
 /* =====================================================================
    PATTERN DETECTION — inspects section heading text + body to tag chips
    ===================================================================== */
+// Tags are derived from the section TITLE only (not body), with word-bounded
+// regexes — body-text matching produced too many false positives (a section
+// briefly mentioning "time" or "subquery" got DATE / CTE chips even when the
+// section's main topic was unrelated).
 const PATTERN_RULES = [
-  [/anti[- ]?join/i,      "Anti-Join"],
-  [/semi[- ]?join/i,      "Semi-Join"],
-  [/self[- ]?join/i,      "Self-Join"],
-  [/recursive|recursion/i,"Recursive CTE"],
-  [/window|row_number|rank\b|lag|lead|partition/i, "Window"],
-  [/pivot|unpivot/i,      "Pivot"],
-  [/gaps?\s*(and|&)?\s*islands?/i, "Gaps & Islands"],
-  [/session(iz|is)/i,     "Sessionization"],
-  [/year[- ]?over[- ]?year|yoy|month[- ]?over/i, "YoY"],
-  [/subquery|CTE/i,       "CTE"],
-  [/group\s*by|HAVING/i,  "Group-By"],
-  [/null/i,               "NULL"],
-  [/cast|conversion/i,    "Casting"],
-  [/DATE|time/i,          "Date"],
-  [/JSON|array/i,         "JSON/Array"],
-  [/index|EXPLAIN|sarg/i, "Performance"],
-  [/transaction|DML|procedure|view/i, "Server-Side"],
+  [/\banti[- ]?join/i,                                                 "Anti-Join"],
+  [/\bsemi[- ]?join/i,                                                 "Semi-Join"],
+  [/\bself[- ]?join/i,                                                 "Self-Join"],
+  [/\brecursi(ve|on)/i,                                                "Recursive CTE"],
+  [/\bwindow\b|\b(row_number|lag|lead|ntile|partition)\b|\branking\b/i,"Window"],
+  [/\b(un)?pivot/i,                                                    "Pivot"],
+  [/gaps?\s*(and|&)?\s*islands?/i,                                     "Gaps & Islands"],
+  [/\bsession(iz|is)/i,                                                "Sessionization"],
+  [/year[- ]?over[- ]?year|\byoy\b|month[- ]?over/i,                   "YoY"],
+  [/\bsubquer|\bctes?\b/i,                                             "CTE"],
+  [/\bgroup\s*by\b|\bhaving\b/i,                                       "Group-By"],
+  [/\bnull\b/i,                                                        "NULL"],
+  [/\bcast(ing)?\b/i,                                                  "Casting"],
+  [/\bdates?\b|\bdatetime\b|\btimestamp\b/i,                           "Date"],
+  [/\bjson\b|\barrays?\b/i,                                            "JSON/Array"],
+  [/\b(performance|indexes?|explain|sarg)/i,                           "Performance"],
+  [/\b(dml|delete|update|insert|merge)\b/i,                            "DML"],
+  [/\b(procedures?|triggers?|views?|stored\s*proc|server[- ]side)\b/i, "Server-Side"],
+  [/\btransactions?\b|\bisolation\b/i,                                 "Transactions"],
+  [/\bstrings?\b|\bconcat\b|\bgroup_concat\b/i,                        "String"],
+  [/\bset[- ]?operations?\b|\bunion\b|\bintersect\b|\bexcept\b/i,      "Set Ops"],
+  [/\bintervals?\b/i,                                                  "Intervals"],
+  [/\bfunnel|\bconversion\s*rate|\bcohort/i,                           "Funnel"],
+  [/\ba\/b\b|\bab\s*test|\blift\b/i,                                   "A/B Test"],
+  [/\bscd\b|\bslowly\s*changing/i,                                     "SCD-2"],
+  [/\bcase\b/i,                                                        "CASE"],
+  [/\bschemas?\b|\bnormali[sz]ation\b|\bconstraints?\b/i,              "Schema"],
+  [/\bgrouping\s*sets|\brollup\b|\bcube\b/i,                           "Grouping Sets"],
 ];
 function detectPatterns(text) {
   const hits = new Set();
   for (const [re, label] of PATTERN_RULES) {
     if (re.test(text)) hits.add(label);
   }
+  // Recursive CTE implies CTE — keep only the more specific tag.
+  if (hits.has("Recursive CTE")) hits.delete("CTE");
   return [...hits];
 }
 
@@ -4436,8 +4453,11 @@ function computeAndPaintMeta(nodes) {
     const practiceSlugs = [...practiceLinks].map(a => a.dataset.slug).filter(Boolean);
     const uniq = [...new Set(practiceSlugs)];
 
-    // patterns — detect from title + prose, return top matches
-    const patterns = detectPatterns(title + " " + bodyText.slice(0, 2000));
+    // patterns — detect from title only. Earlier we matched against title +
+    // first 2000 chars of body, but that produced too many false positives:
+    // any §0 section briefly mentioning "subquery" or "ranking" picked up
+    // CTE / Window chips even when the section was about something else.
+    const patterns = detectPatterns(title);
 
     // difficulty histogram — count ONLY rows that also carry a practice link,
     // and dedupe by slug so a problem listed in multiple practice tables
@@ -7221,7 +7241,8 @@ ORDER BY d.customer_id;
 | 1 | Department Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=department-highest-salary) |
 | 2 | Exchange Seats | Medium | [▶ Practice](sql_sandbox.html?slug=exchange-seats) |
 | 3 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) |
-| 4 | **Game Play Analysis V** | Hard | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-v) |
+| 4 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
+| 5 | **Game Play Analysis V** | Hard | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-v) |
 
 ---
 
@@ -7529,12 +7550,6 @@ JOIN orders o ON c.id = o.customer_id;
   </ol>
   <div class="quiz-why">A semi-join returns each outer row at most once — it asks "does <em>any</em> matching row exist?" and stops. A plain <code>INNER JOIN</code> would return customer 7 three times (once per order); that's why semi-joins avoid the <code>SELECT DISTINCT</code> workaround.</div>
 </div>
-
-### 🔗 Practice Problems
-
-| # | Problem | Difficulty | Practice |
-|---|---|---|---|
-| 1 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
 
 ---
 
