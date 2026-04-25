@@ -915,6 +915,11 @@
             flex-direction: column;
             overflow: hidden;
             position: relative;
+            /* Fluid root font-size — every rem-based size in the sandbox
+               (buttons, panels, schema table, results) tracks the viewport
+               between 320px and 1440px. Keeps zoom/resize feeling
+               continuous instead of breakpoint-jumpy. */
+            font-size: clamp(15px, 14px + 0.2vw, 17px);
         }
         /* Cartographer grid atmosphere */
         body::before {
@@ -993,8 +998,10 @@
         .workspace {
             display: flex;
             height: calc(100vh - 62px);
-            padding: 0.6rem;
-            gap: 0.6rem;
+            /* Fluid edge gutter + inter-panel gap so the workspace breathes
+               on a 320px phone and isn't gappy on a 4k display. */
+            padding: clamp(0.35rem, 0.5vw + 0.2rem, 0.6rem);
+            gap: clamp(0.35rem, 0.5vw + 0.2rem, 0.6rem);
         }
         .panel {
             background: linear-gradient(180deg, rgba(23,30,51,0.55), rgba(12,18,32,0.75));
@@ -1151,16 +1158,21 @@
         .btn {
             border: 1px solid transparent;
             border-radius: 2px;
-            padding: 8px 20px;
+            /* Fluid horizontal padding so RUN/SUBMIT/FORMAT/RESET stay
+               readable on mobile but don't ballon on desktop. */
+            padding: clamp(6px, 0.7vw + 4px, 8px) clamp(10px, 2.5vw + 4px, 20px);
             font-family: 'JetBrains Mono', monospace;
             font-weight: 500;
-            font-size: 0.72rem;
+            font-size: clamp(0.62rem, 0.55rem + 0.25vw, 0.72rem);
             text-transform: uppercase;
             letter-spacing: 0.16em;
             cursor: pointer;
             transition: all 200ms ease;
             color: var(--parchment);
             background: transparent;
+            /* Allow buttons to shrink when the toolbar is squeezed instead
+               of forcing horizontal scroll. */
+            min-width: 0;
         }
         .btn-run {
             background: rgba(255,255,255,0.03);

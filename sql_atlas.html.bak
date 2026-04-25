@@ -32,7 +32,13 @@
     font-family: 'Figtree', sans-serif;
     font-weight: 400;
     letter-spacing: 0.005em;
-    font-size: calc(16px * var(--font-scale));
+    /* Fluid root typography — every rem-based size in the page tracks the
+       viewport AND the user's --font-scale. clamp() floor (15px) keeps
+       readability on a 320px phone; ceiling (17px) prevents monumental
+       layouts on a 1920px+ display. The 0.2vw component is what makes
+       browser zoom + window resize feel continuous instead of
+       breakpoint-jumpy. */
+    font-size: calc(clamp(15px, 14px + 0.2vw, 17px) * var(--font-scale));
   }
 
   body::before {
@@ -1427,16 +1433,38 @@
     backdrop-filter: blur(8px);
     z-index: 1000;
     display: none;
-    align-items: center;
+    /* `flex-start` plus `margin: auto` on the card (defined below) keeps the
+       card centered when it fits, but lets the top of the card stay
+       reachable when the card is taller than the viewport. The `safe center`
+       keyword would do this in one line but has spotty browser support, so
+       we use the margin-auto trick instead — works everywhere. */
+    align-items: flex-start;
     justify-content: center;
     padding: 2rem 1rem;
+    /* Allow the scrim itself to scroll vertically when the card is taller
+       than the viewport (small phones, browser zoom, narrow heights). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     animation: conqFade 0.6s ease-out;
   }
   .conqueror-scrim.open { display: flex; }
+  /* `margin: auto` keeps the card centered when there's leftover space; when
+     the card is taller than the viewport, the scrim's `align-items: safe
+     center` prevents the top from being clipped, and `overflow-y: auto`
+     lets the user scroll down to reach the action buttons. */
+  .conqueror-scrim > .conqueror-card { margin: auto; }
   .conqueror-card {
-    max-width: 640px;
+    /* Cap to viewport so a 360px phone never gets a 640px card pushing
+       horizontal scroll. The outer scrim already adds 1rem padding, so
+       calc subtracts 2rem for symmetry. */
+    max-width: min(640px, calc(100vw - 2rem));
     width: 100%;
-    padding: 3rem 2.5rem 2.2rem;
+    /* Fluid padding scales the modal interior with the viewport instead of
+       eating most of a small phone's width on hard 3rem padding. */
+    padding: clamp(1.6rem, 2vw + 1rem, 3rem)
+             clamp(1rem, 2vw + 0.6rem, 2.5rem)
+             clamp(1.2rem, 1.6vw + 0.7rem, 2.2rem);
     background: linear-gradient(160deg, #1a2030 0%, #13171f 100%);
     border: 1px solid rgba(232,180,94,0.35);
     border-radius: 4px;
@@ -1562,8 +1590,12 @@
   /* The modal is re-used for welcome / daily-streak / broken-streak / conqueror /
      manual — sections show or hide based on data-mode on the scrim. */
   #voyageScrim .voyage-card {
-    max-width: 720px;
-    padding: 2.2rem 2.2rem 1.8rem;
+    /* Same viewport-aware cap as `.conqueror-card` so the welcome / streak /
+       conqueror modal never exceeds the available width on phones. */
+    max-width: min(720px, calc(100vw - 2rem));
+    padding: clamp(1.6rem, 2vw + 1rem, 2.2rem)
+             clamp(1rem, 2vw + 0.6rem, 2.2rem)
+             clamp(1.2rem, 1.4vw + 0.7rem, 1.8rem);
     text-align: center;
   }
   /* Default: everything hidden except the map + quote */
@@ -1664,8 +1696,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    padding: 0.55rem 0.8rem;
+    gap: clamp(0.35rem, 1.5vw, 0.6rem);
+    /* Fluid horizontal padding so the row tightens on phones without
+       needing a hard breakpoint. */
+    padding: clamp(0.4rem, 1vw, 0.55rem) clamp(0.5rem, 2vw, 0.8rem);
+    /* min-width: 0 lets a flex child shrink below its content size — without
+       this, long placeholder text would force the row wider than its parent
+       and trigger horizontal overflow on narrow viewports. */
+    min-width: 0;
+    max-width: 100%;
     border: 1px solid rgba(232, 180, 94, 0.32);
     border-radius: 4px;
     background: linear-gradient(160deg, rgba(232,180,94,0.08), rgba(232,180,94,0.02) 80%);
@@ -1678,10 +1717,12 @@
   .voyage-name-capture .name-prefix {
     font-family: 'Playfair Display', serif;
     font-style: italic;
-    font-size: 1.1rem;
+    /* Scales 0.92rem → 1.1rem across 320px → 1280px viewports. */
+    font-size: clamp(0.92rem, 0.85rem + 0.4vw, 1.1rem);
     color: var(--amber);
     letter-spacing: 0.02em;
     flex: 0 0 auto;
+    white-space: nowrap;
   }
   .voyage-name-capture .name-input {
     flex: 1 1 auto;
@@ -1690,12 +1731,16 @@
     outline: none;
     color: var(--parchment);
     font-family: 'Playfair Display', 'Fraunces', serif;
-    font-size: 1.2rem;
+    /* Scales 1rem → 1.2rem fluidly. */
+    font-size: clamp(1rem, 0.92rem + 0.45vw, 1.2rem);
     font-style: italic;
     letter-spacing: 0.01em;
     text-align: left;
     padding: 0.2rem 0.1rem;
+    /* Critical: min-width: 0 + width: 100% lets the input shrink with the
+       row instead of forcing it to its placeholder's intrinsic width. */
     min-width: 0;
+    width: 100%;
   }
   .voyage-name-capture .name-input::placeholder {
     color: var(--muted);
@@ -1802,10 +1847,13 @@
     .voyage-captain-log .log-value { font-size: 1.25rem; }
   }
 
-  /* Treasure map inside modal — slightly smaller, same look */
+  /* Treasure map inside modal — slightly smaller, same look. The 100% cap
+     is what makes it shrink with a narrow modal card; without it the SVG
+     would push the card horizontally on small phones. */
   .voyage-wrap-in-modal {
     margin: 0.4rem auto 1.3rem;
-    max-width: 620px;
+    max-width: min(620px, 100%);
+    width: 100%;
   }
   .voyage-wrap-in-modal .voyage-strip { height: 150px; }
   .voyage-wrap-in-modal .voyage-log   { font-size: 0.58rem; letter-spacing: 0.18em; margin-top: 0.4rem; }
