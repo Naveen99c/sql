@@ -6815,6 +6815,84 @@ Break complex logic into modular, readable pieces. CTEs are named temporary resu
 - **Uncorrelated:** Runs once, independently of the outer query. Think of it as a constant.
 - **Correlated:** Runs once **per row** of the outer query (conceptually). The optimizer often rewrites it as a join.
 
+#### One example per type — same `employees(id, name, salary, dept_id)` table
+
+Each example below corresponds to **one row of the table above**, in order. Read the comment first, then the SQL — that's the shape that row of the table is describing.
+
+**1. Scalar subquery** — returns exactly *one row, one column*. Used like a value.
+
+```sql
+-- "Who earns more than the company average?"
+-- The (SELECT AVG(salary) ...) returns a single number, e.g. 78000.
+-- The outer query then reads it like any constant on the right of `>`.
+SELECT name, salary
+FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
+```
+
+**2. Row subquery** — returns *one row with multiple columns*. Compared as a tuple.
+
+```sql
+-- "Find the employee whose (dept_id, salary) exactly matches the
+--  highest-paid person in dept 5."  The subquery returns one row of
+--  TWO values; the outer WHERE compares two columns against it at once.
+SELECT name
+FROM employees
+WHERE (dept_id, salary) = (
+    SELECT dept_id, MAX(salary)
+    FROM employees
+    WHERE dept_id = 5
+    GROUP BY dept_id
+);
+```
+
+**3. Table (derived) subquery** — returns *N rows × N cols*. Used in `FROM` like a virtual table.
+
+```sql
+-- "What's the average of each dept's MAX salary?"
+-- The inner query produces a small table (one row per dept).
+-- The outer query then aggregates that table.  Two-stage aggregation.
+SELECT AVG(dept_max) AS avg_of_dept_maxes
+FROM (
+    SELECT dept_id, MAX(salary) AS dept_max
+    FROM employees
+    GROUP BY dept_id
+) AS d;
+```
+
+**4. Correlated subquery** — *references the outer row*; runs once per outer row (conceptually).
+
+```sql
+-- "Show every employee with their own department's average salary."
+-- The inner query has e2.dept_id = e1.dept_id — `e1` comes from the
+-- outer query, so the inner result CHANGES per outer row.
+SELECT
+    e1.name,
+    e1.salary,
+    (SELECT AVG(e2.salary)
+     FROM employees e2
+     WHERE e2.dept_id = e1.dept_id) AS dept_avg
+FROM employees e1;
+```
+
+**5. EXISTS subquery** — returns *true / false* per outer row. Always correlated.
+
+```sql
+-- "Find departments that have at least one employee earning >100k."
+-- EXISTS short-circuits as soon as it finds one matching row, so this
+-- is usually faster than COUNT(*) > 0 or IN (SELECT ...).
+SELECT d.dept_name
+FROM departments d
+WHERE EXISTS (
+    SELECT 1
+    FROM employees e
+    WHERE e.dept_id = d.id
+      AND e.salary > 100000
+);
+```
+
+💡 **Quick mental map:** *Scalar* = a value · *Row* = a tuple · *Table* = a mini-table you join/aggregate · *Correlated* = "reads from the outer row" · *EXISTS* = "does any row satisfy this?"
+
 ### CTE Mechanics
 
 ```sql
