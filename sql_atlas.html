@@ -978,6 +978,18 @@
     }
     main > * { min-width: 0 !important; max-width: 100% !important; }
     main pre, main code { white-space: pre-wrap !important; word-break: break-word !important; }
+    /* Tables already scroll horizontally on mobile (`display:block; overflow-x:auto`).
+       Inside a table cell we want short tokens like `INT`, `VARCHAR(255)`,
+       `DECIMAL(p,s)` to stay on one line and let the table scroll, not break
+       character-by-character into a vertical stack. The wrapper rule above is
+       too aggressive for table cells, so re-pin them to nowrap here. */
+    .guide-body table code,
+    .guide-body th code,
+    .guide-body td code {
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+    }
 
     /* Search + facets stack */
     .search-row { flex-direction: column !important; align-items: stretch !important; }
