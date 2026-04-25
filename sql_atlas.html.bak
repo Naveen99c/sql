@@ -717,6 +717,76 @@
   /* row accent — subtly tints the row of a solved problem */
   .guide-body tr[data-status="passed"] td { background: rgba(103,201,192,0.05); }
   .guide-body tr[data-status="attempted"] td { background: rgba(229,166,59,0.035); }
+
+  /* ------- Per-problem star (small variant of the section star) -------
+     Lives inside each practice-table row. Persisted under
+     atlas.problemStar.<slug>. Visible faint by default; gold when starred. */
+  .guide-body table .problem-star {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    margin-right: 6px;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    opacity: 0.35;
+    vertical-align: middle;
+    user-select: none;
+    border-radius: 50%;
+    transition: color 180ms ease, opacity 180ms ease, transform 160ms ease,
+                background 180ms ease;
+  }
+  .guide-body table tr:hover .problem-star { opacity: 0.85; }
+  .guide-body table .problem-star:hover {
+    color: var(--amber);
+    opacity: 1;
+    transform: scale(1.18);
+    background: rgba(229,166,59,0.07);
+  }
+  .guide-body table .problem-star.starred {
+    color: var(--amber-hot);
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(229,166,59,0.45);
+  }
+  .guide-body tr[data-problem-starred="1"] td { background: rgba(229,166,59,0.05); }
+
+  /* ------- Module-complete chip -------
+     Replaces the muted "X/Y ▶" counter when every practice problem in the
+     section is `passed`. Teal + glow + ✓ glyph signals the section is done. */
+  .chip.module-complete {
+    background: linear-gradient(135deg, rgba(103,201,192,0.22), rgba(229,166,59,0.18));
+    border-color: rgba(103,201,192,0.55);
+    color: var(--teal);
+    font-weight: 700;
+    text-shadow: 0 0 6px rgba(103,201,192,0.45);
+  }
+  /* When BOTH problems-chip and quiz-chip on a section are fully complete,
+     a small ✓ ribbon appears beside the title to celebrate. Driven by
+     `data-module-complete="1"` on the summary's <span>. */
+  .module-complete-ribbon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding: 1px 7px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(103,201,192,0.1);
+    border: 1px solid rgba(103,201,192,0.5);
+    border-radius: 999px;
+    text-shadow: 0 0 6px rgba(103,201,192,0.55);
+    animation: ribbonPop 380ms ease-out;
+  }
+  @keyframes ribbonPop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
   .guide-body a.xref {
     color: var(--teal);
     text-decoration: underline;
@@ -2794,6 +2864,10 @@ function decorate(root) {
     }
   });
   paintPillStatuses(root);
+  // Per-problem stars — inject into each practice-table row, then paint
+  // glyph state from localStorage.
+  decorateProblemStars(root);
+  paintProblemStars(root);
 
   // code highlight
   root.querySelectorAll("pre > code").forEach(c => {
@@ -2987,27 +3061,45 @@ function computeAndPaintMeta(nodes) {
     }
 
     // per-node aggregate: "X/Y ▶"
+    // When solved === total (and total > 0), the chip turns into the
+    // "module-complete" celebratory style with a ✓ glyph. Drives the section
+    // ribbon below as well.
     let solvedHtml = "";
+    let problemsAllDone = false;
     if (uniq.length > 0 && !slug) {
       const solved = uniq.filter(s => getStatus(s) === "passed").length;
-      solvedHtml = `<span class="chip muted">${solved}/${uniq.length} ▶</span>`;
+      problemsAllDone = solved === uniq.length;
+      const cls = problemsAllDone ? "module-complete" : "muted";
+      const prefix = problemsAllDone ? "✓ " : "";
+      solvedHtml = `<span class="chip ${cls}" title="${problemsAllDone ? "All practice problems solved in this section" : "Practice problems solved in this section"}">${prefix}${solved}/${uniq.length} ▶</span>`;
     }
 
     // separate quiz aggregate: "X/Y ?" — counted independently from problems
     let quizHtml = "";
+    let quizzesAllDone = false;
+    let quizCount = 0;
     if (!slug) {
       const quizzes = node.querySelectorAll(".quiz[data-quiz-id]");
+      quizCount = quizzes.length;
       if (quizzes.length > 0) {
         let qDone = 0, qCorrect = 0;
         quizzes.forEach(q => {
           const ans = getQuizAnswer(q.dataset.quizId);
           if (ans) { qDone++; if (ans.correct) qCorrect++; }
         });
+        quizzesAllDone = qCorrect === quizzes.length;
         const qCls = qDone === 0 ? "muted"
-                   : qCorrect === quizzes.length ? "teal" : "";
-        quizHtml = `<span class="chip ${qCls}" data-quiz-chip="1" title="Multiple-choice quizzes answered correctly in this section">${qCorrect}/${quizzes.length} MCQ</span>`;
+                   : quizzesAllDone ? "module-complete" : "";
+        const qPrefix = quizzesAllDone ? "✓ " : "";
+        quizHtml = `<span class="chip ${qCls}" data-quiz-chip="1" title="Multiple-choice quizzes answered correctly in this section">${qPrefix}${qCorrect}/${quizzes.length} MCQ</span>`;
       }
     }
+    // Ribbon: only when this section actually had practice + quizzes AND both
+    // sets are 100% complete. Skip for nodes with no checkable content.
+    const moduleComplete = !slug
+      && (uniq.length > 0 || quizCount > 0)
+      && (uniq.length === 0 || problemsAllDone)
+      && (quizCount   === 0 || quizzesAllDone);
 
     // difficulty chip logic:
     //  • leaf problem: single chip of its own difficulty
@@ -3041,6 +3133,23 @@ function computeAndPaintMeta(nodes) {
     } else {
       meta.innerHTML = statusHtml + diffHtml + patChipsHtml + solvedHtml + quizHtml;
     }
+
+    // Module-complete ribbon — appended next to the section title when every
+    // practice problem AND every quiz in this section has been completed.
+    // Lives inside the summary's title span so it tracks alongside the title.
+    const titleSpan = node.querySelector(":scope > summary .sec-title, :scope > summary .phase-title");
+    if (titleSpan) {
+      // Drop any stale ribbon first so re-paints don't accumulate copies.
+      titleSpan.querySelectorAll(":scope > .module-complete-ribbon").forEach(r => r.remove());
+      if (moduleComplete) {
+        const ribbon = document.createElement("span");
+        ribbon.className = "module-complete-ribbon";
+        ribbon.title = "Module complete — every problem and quiz solved";
+        ribbon.textContent = "✓ Complete";
+        titleSpan.appendChild(ribbon);
+      }
+    }
+    node.dataset.moduleComplete = moduleComplete ? "1" : "";
 
     // dataset tags for filter
     node.dataset.difficulty = dominantDiff || "";
@@ -3175,6 +3284,68 @@ function paintStars(root) {
     // dataset lookup instead of hitting localStorage per node per re-filter.
     if (on) node.dataset.starred = "1";
     else    delete node.dataset.starred;
+  });
+}
+
+/* =====================================================================
+   STAR / FAVOURITE (per-practice-problem, by slug)
+   ===================================================================== */
+// localStorage schema: atlas.problemStar.<slug> = "1"  (presence = starred)
+// Lives next to atlas.status.<slug> — different concern (status = solve state,
+// star = "I want to revisit this one"), kept independent so a passed problem
+// can also be starred and vice-versa.
+function isProblemStarred(slug) {
+  try { return !!localStorage.getItem("atlas.problemStar." + slug); }
+  catch (_) { return false; }
+}
+function setProblemStarred(slug, on) {
+  try {
+    if (on) localStorage.setItem("atlas.problemStar." + slug, "1");
+    else    localStorage.removeItem("atlas.problemStar." + slug);
+  } catch (_) {}
+}
+/* Inject a star button into each practice-table row, in the cell that holds
+   the problem name (typically column 2 — `| # | Problem | Difficulty |
+   Practice |`). Idempotent: skips rows that already have a star. */
+function decorateProblemStars(root) {
+  (root || document).querySelectorAll("a.practice-pill").forEach(pill => {
+    const slug = pill.dataset.slug;
+    if (!slug) return;
+    const tr = pill.closest("tr");
+    if (!tr) return;
+    const cells = tr.querySelectorAll("td");
+    if (cells.length < 2) return;
+    // Heuristic: the "name" cell is the second-to-last that ISN'T the practice
+    // cell or the difficulty chip cell. In practice it's index 1 in a 4-col
+    // table (`| # | Problem | Difficulty | Practice |`). Fall back to index 1
+    // when the first column looks like a row number.
+    const nameCell = cells[1] || cells[0];
+    if (!nameCell || nameCell.querySelector(".problem-star")) return;
+    const star = document.createElement("span");
+    const on = isProblemStarred(slug);
+    star.className = "problem-star" + (on ? " starred" : "");
+    star.setAttribute("role", "button");
+    star.setAttribute("tabindex", "0");
+    star.setAttribute("aria-label", "Star this problem");
+    star.setAttribute("title", "Star this problem to revisit later");
+    star.dataset.problemSlug = slug;
+    star.textContent = on ? "★" : "☆";
+    nameCell.prepend(star);
+    if (on) tr.dataset.problemStarred = "1";
+  });
+}
+/* Repaints ★/☆ glyph + row tint after a click or storage change. */
+function paintProblemStars(root) {
+  (root || document).querySelectorAll(".problem-star[data-problem-slug]").forEach(s => {
+    const slug = s.dataset.problemSlug;
+    const on = isProblemStarred(slug);
+    s.classList.toggle("starred", on);
+    s.textContent = on ? "★" : "☆";
+    const tr = s.closest("tr");
+    if (tr) {
+      if (on) tr.dataset.problemStarred = "1";
+      else    delete tr.dataset.problemStarred;
+    }
   });
 }
 
@@ -4463,6 +4634,34 @@ document.addEventListener("DOMContentLoaded", () => {
     if (activeFacet === "starred") applyFacet("starred");
   }, true);
 
+  // Per-problem star toggle — separate handler, lives inside practice tables.
+  // Stops propagation so the click doesn't navigate to the practice link or
+  // mark the problem as "attempted" via the practice-pill click handler.
+  $("#guide").addEventListener("click", (e) => {
+    const star = e.target.closest(".problem-star[data-problem-slug]");
+    if (!star) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const slug = star.dataset.problemSlug;
+    const on = !isProblemStarred(slug);
+    setProblemStarred(slug, on);
+    star.classList.toggle("starred", on);
+    star.textContent = on ? "★" : "☆";
+    const tr = star.closest("tr");
+    if (tr) {
+      if (on) tr.dataset.problemStarred = "1";
+      else    delete tr.dataset.problemStarred;
+    }
+  }, true);
+  // Keyboard a11y: ↵/Space on a focused star toggles it (matches button role).
+  $("#guide").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const star = e.target.closest(".problem-star[data-problem-slug]");
+    if (!star) return;
+    e.preventDefault();
+    star.click();
+  });
+
   // Persist the set of open <details> so a refresh restores exactly the
   // nodes the user had expanded. Uses event delegation on #guide with
   // `capture: true` because `toggle` doesn't bubble.
@@ -4534,9 +4733,12 @@ document.addEventListener("DOMContentLoaded", () => {
   window.refreshAtlasProgress = refreshAtlasProgress;
 
   // storage event — fires only for cross-document writes (sandbox opened in
-  // a separate tab).
+  // a separate tab). Also sync per-problem stars across tabs.
   window.addEventListener("storage", (e) => {
     if (e.key?.startsWith("atlas.status.")) refreshAtlasProgress();
+    else if (e.key?.startsWith("atlas.problemStar.")) {
+      paintProblemStars(document.getElementById("guide"));
+    }
   });
   // Same-tab bridge — the in-page sandbox overlay dispatches this custom event
   // after writing `atlas.status.<slug>`, since `storage` events are silent in
@@ -5397,10 +5599,6 @@ B    | 5</code></pre>
 | 2 | Classes More Than 5 Students | Easy | [▶ Practice](sql_sandbox.html?slug=classes-more-than-5-students) |
 | 3 | Number of Unique Categories | Easy | [▶ Practice](sql_sandbox.html?slug=number-of-unique-categories) |
 | 4 | Average Selling Price | Easy | [▶ Practice](sql_sandbox.html?slug=average-selling-price) |
-| 5 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
-| 6 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) |
-| 7 | Count Salary Categories | Medium | [▶ Practice](sql_sandbox.html?slug=count-salary-categories) |
-| 8 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) |
 
 ---
 
@@ -5609,7 +5807,7 @@ ORDER BY d.customer_id;
 | 1 | Customers Who Never Order | Easy | [▶ Practice](sql_sandbox.html?slug=customers-who-never-order) |
 | 2 | Department Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=department-highest-salary) |
 | 3 | Exchange Seats | Medium | [▶ Practice](sql_sandbox.html?slug=exchange-seats) |
-| 4 | **Median Employee Salary** | Hard | [▶ Practice](sql_sandbox.html?slug=median-employee-salary) |
+| 4 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) — first-order-per-customer filter via subquery in `WHERE (customer_id, order_date) IN (SELECT customer_id, MIN(order_date) ...)`. |
 | 5 | **Game Play Analysis V** | Hard | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-v) |
 
 ---
@@ -5749,10 +5947,8 @@ GROUP BY m.match_date;
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
 | 1 | Employees Earning More Than Managers | Easy | [▶ Practice](sql_sandbox.html?slug=employees-earning-more-than-managers) |
-| 2 | Friend Requests II | Medium | [▶ Practice](sql_sandbox.html?slug=friend-requests-ii) |
-| 3 | **Market Analysis I** | Medium | [▶ Practice](sql_sandbox.html?slug=market-analysis-i) |
-| 4 | **Trips and Users** | Hard | [▶ Practice](sql_sandbox.html?slug=trips-and-users) |
-| 5 | **Customers with Strictly Increasing Purchases** | Hard | [▶ Practice](sql_sandbox.html?slug=customers-with-strictly-increasing-purchases) |
+| 2 | **Market Analysis I** | Medium | [▶ Practice](sql_sandbox.html?slug=market-analysis-i) |
+| 3 | **Trips and Users** | Hard | [▶ Practice](sql_sandbox.html?slug=trips-and-users) |
 
 ---
 
@@ -5867,11 +6063,8 @@ WHERE NOT EXISTS (
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
 | 1 | Customers Who Never Order | Easy | [▶ Practice](sql_sandbox.html?slug=customers-who-never-order) |
-| 2 | Students and Examinations | Easy | [▶ Practice](sql_sandbox.html?slug=students-and-examinations) |
-| 3 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
-| 4 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) |
-| 5 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) — self-join to list friend-of-friend candidates, anti-join to exclude people already followed. |
-| 6 | **Products Never Purchased (NULL-Trap Edition)** | Medium | [▶ Practice](sql_sandbox.html?slug=products-never-purchased) — the canonical `NOT IN` vs `NOT EXISTS` disaster. One `NULL` gift-card order in the subquery returns zero rows from a naïve `NOT IN`. See §0.2. |
+| 2 | **Products Never Purchased (NULL-Trap Edition)** | Medium | [▶ Practice](sql_sandbox.html?slug=products-never-purchased) — the canonical `NOT IN` vs `NOT EXISTS` disaster. One `NULL` gift-card order in the subquery returns zero rows from a naïve `NOT IN`. See §0.2. |
+| 3 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) — self-join to list friend-of-friend candidates, anti-join to exclude people already followed. |
 
 ---
 
@@ -5928,8 +6121,7 @@ JOIN orders o ON c.id = o.customer_id;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 2 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
-| 3 | **Active Users** | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) |
+| 1 | Customers Who Bought All Products | Medium | [▶ Practice](sql_sandbox.html?slug=customers-who-bought-all-products) |
 
 ---
 
@@ -6057,7 +6249,7 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | **Latest Two Orders Per Customer** | Medium | [▶ Practice](sql_sandbox.html?slug=latest-two-orders-per-customer) — the canonical LATERAL / CROSS APPLY shape: multiple columns *and* multiple rows per parent. Solve it two ways — once with `ROW_NUMBER()` (SQLite-safe) and once with `LATERAL` (Postgres/SQL Server mental model). |
+| 1 | Students and Examinations | Easy | [▶ Practice](sql_sandbox.html?slug=students-and-examinations) — CROSS JOIN every student with every exam, then LEFT JOIN attendance to count how many times each student took each exam. The canonical "every (student, exam) combo even if zero attendances" shape. |
 
 ---
 
@@ -6087,6 +6279,13 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
   </ol>
   <div class="quiz-why"><code>UNION</code> deduplicates the combined result → <code>{1, 2, 3}</code> = 3 rows. <code>UNION ALL</code> just concatenates → <code>1, 2, 2, 2, 3</code> = 5 rows. When duplicates can't occur, prefer <code>UNION ALL</code> to skip the dedup cost.</div>
 </div>
+
+### 🔗 Practice Problems
+
+| # | Problem | Difficulty | Practice |
+|---|---|---|---|
+| 1 | Count Salary Categories | Medium | [▶ Practice](sql_sandbox.html?slug=count-salary-categories) — three category labels stacked with `UNION ALL`, each side a single-row aggregate so empty buckets still surface as `0`. |
+| 2 | Friend Requests II | Medium | [▶ Practice](sql_sandbox.html?slug=friend-requests-ii) — `UNION ALL` the requester-side and accepter-side counts into one stack, then aggregate by id. |
 
 ---
 
@@ -6365,8 +6564,9 @@ ORDER BY category_name, units DESC;
 | 1 | Second Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=second-highest-salary) |
 | 2 | Nth Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=nth-highest-salary) |
 | 3 | Rank Scores | Medium | [▶ Practice](sql_sandbox.html?slug=rank-scores) |
-| 4 | **Department Top Three Salaries** | Hard | [▶ Practice](sql_sandbox.html?slug=department-top-three-salaries) |
-| 5 | **Market Analysis II** | Hard | [▶ Practice](sql_sandbox.html?slug=market-analysis-ii) |
+| 4 | **Latest Two Orders Per Customer** | Medium | [▶ Practice](sql_sandbox.html?slug=latest-two-orders-per-customer) — the canonical LATERAL / CROSS APPLY shape: multiple columns *and* multiple rows per parent. Solve it two ways — once with `ROW_NUMBER()` (SQLite-safe) and once with `LATERAL` (Postgres/SQL Server mental model). |
+| 5 | **Department Top Three Salaries** | Hard | [▶ Practice](sql_sandbox.html?slug=department-top-three-salaries) |
+| 6 | **Market Analysis II** | Hard | [▶ Practice](sql_sandbox.html?slug=market-analysis-ii) |
 
 ---
 
@@ -6522,11 +6722,8 @@ ORDER BY trade_date;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | Rising Temperature | Easy | [▶ Practice](sql_sandbox.html?slug=rising-temperature) |
-| 2 | Consecutive Numbers | Medium | [▶ Practice](sql_sandbox.html?slug=consecutive-numbers) |
-| 3 | Game Play Analysis III | Medium | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-iii) |
-| 4 | **Find Cumulative Salary of an Employee** | Hard | [▶ Practice](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) |
-| 5 | **Number of Comments per Post** | Medium | [▶ Practice](sql_sandbox.html?slug=number-of-comments-per-post) |
+| 1 | Consecutive Numbers | Medium | [▶ Practice](sql_sandbox.html?slug=consecutive-numbers) |
+| 2 | Number of Comments per Post | Medium | [▶ Practice](sql_sandbox.html?slug=number-of-comments-per-post) |
 
 ---
 
@@ -6697,7 +6894,9 @@ for totals, but **distinct** counts need the correlated subquery (or a self-join
 | 2 | Last Person to Fit in the Bus | Medium | [▶ Practice](sql_sandbox.html?slug=last-person-to-fit-in-the-bus) |
 | 3 | Account Balance | Medium | [▶ Practice](sql_sandbox.html?slug=account-balance) |
 | 4 | Rolling 7-Day Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=rolling-7-day-active-users) |
-| 5 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
+| 5 | **Find Cumulative Salary of an Employee** | Hard | [▶ Practice](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) — three-month running sum per employee using `SUM(...) OVER (PARTITION BY id ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)`. |
+| 6 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) — windowed `AVG(salary) OVER (PARTITION BY dept_id)` vs the company-wide `AVG(salary) OVER ()`, then label each row higher / lower / same. |
+| 7 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
 
 ---
 
@@ -6819,7 +7018,6 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) = 1;
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
 | 1 | **Median Employee Salary** | Hard | [▶ Practice](sql_sandbox.html?slug=median-employee-salary) |
-| 2 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
 
 ---
 
@@ -7113,11 +7311,7 @@ WHERE outcome = 'W' AND prev_outcome = 'W' AND next_outcome = 'W';
 |---|---|---|---|
 | 1 | Consecutive Numbers | Medium | [▶ Practice](sql_sandbox.html?slug=consecutive-numbers) |
 | 2 | Active Businesses | Medium | [▶ Practice](sql_sandbox.html?slug=active-businesses) |
-| 3 | Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) |
-| 4 | **Consecutive Transactions** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions) |
-| 5 | **Human Traffic of Stadium** | Hard | [▶ Practice](sql_sandbox.html?slug=human-traffic-of-stadium) |
-| 6 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) |
-
+| 3 | **Human Traffic of Stadium** | Hard | [▶ Practice](sql_sandbox.html?slug=human-traffic-of-stadium) |
 ---
 
 ## 4.2 Overlapping Intervals
@@ -7436,9 +7630,7 @@ explosion, reply-thread depth — the recursion builds the transitive closure, t
 | 2 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
 | 3 | Managers with At Least 5 Reports | Medium | [▶ Practice](sql_sandbox.html?slug=managers-with-at-least-5-reports) |
 | 4 | **Find the Quiet Students in All Exams** | Hard | [▶ Practice](sql_sandbox.html?slug=find-the-quiet-students-in-all-exams) |
-| 5 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) |
-| 6 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) |
-| 7 | **Tree Node** | Medium | [▶ Practice](sql_sandbox.html?slug=tree-node) — classify each node as Root / Inner / Leaf using a self-referencing hierarchy. |
+| 5 | **Tree Node** | Medium | [▶ Practice](sql_sandbox.html?slug=tree-node) — classify each node as Root / Inner / Leaf using a self-referencing hierarchy. |
 
 ---
 
@@ -7755,8 +7947,7 @@ FROM employees;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) |
-| 2 | **Product Price at a Given Date** (SCD-2) | Medium | [▶ Practice](sql_sandbox.html?slug=product-price-at-a-given-date) |
+| 1 | **Product Price at a Given Date** (SCD-2) | Medium | [▶ Practice](sql_sandbox.html?slug=product-price-at-a-given-date) |
 
 ---
 
@@ -8061,6 +8252,14 @@ GROUP BY DATE_FORMAT(trans_date, '%Y-%m'), country;
 | 4 | Cohort Retention Day N | Hard | [▶ Practice](sql_sandbox.html?slug=cohort-retention-day-n) |
 | 5 | **Friday Purchases I** | Hard | [▶ Practice](sql_sandbox.html?slug=friday-purchases-i) |
 | 6 | **New Users Daily Count** | Medium | [▶ Practice](sql_sandbox.html?slug=new-users-daily-count) |
+| 7 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) — pivot quantities by `DAYNAME(order_date)` so each item has Monday…Sunday columns. |
+| 8 | **Customers with Strictly Increasing Purchases** | Hard | [▶ Practice](sql_sandbox.html?slug=customers-with-strictly-increasing-purchases) — extract the year via `strftime('%Y', order_date)` (or `EXTRACT`/`YEAR`), sum per (customer, year), then `LAG` over years to require every step both `+1` year apart and strictly increasing. |
+| 9 | Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) — 5+ consecutive-day streaks → group by `(activity_date − ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY activity_date))`, which needs `JULIANDAY` to subtract dates. |
+| 10 | **Consecutive Transactions** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions) — islands of consecutive trans-days; the gap key uses `JULIANDAY(trans_date) − ROW_NUMBER()`. |
+| 11 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) — gaps & islands plus monotonic-step check; same `JULIANDAY` gap-key technique. |
+| 12 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) — recursive month-spine 2020-01..12 generated with `date('2020-01-01', '+' || (n-1) || ' month')` then left-joined to monthly aggregates of `strftime('%Y-%m', request_at)`. |
+| 13 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) — extends the recursive month-spine with acceptance-rate per month using the same `strftime` grouping. |
+| 14 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) — sessionization with 5-minute idle gap → `LAG(activity_time)` plus `(julianday(t) − julianday(prev)) * 86400 > 300` to start a new session. |
 
 ---
 
