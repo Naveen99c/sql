@@ -3643,7 +3643,7 @@ body.sandbox-open { overflow: hidden; }
     </p>
     <div class="flex flex-wrap gap-3 reveal" style="animation-delay:.35s">
       <span class="chip" title="Phase 0 – Phase 6 plus a Quick Reference: mental model, schema, core patterns, windows, advanced patterns, data types, performance.">7 Phases</span>
-      <span class="chip teal" id="chipProblems" title="Every problem runs in an in-browser SQLite sandbox with a hidden edge-case validator.">58 Problems</span>
+      <span class="chip teal" id="chipProblems" title="Every problem runs in an in-browser SQLite sandbox with a hidden edge-case validator.">70 Problems</span>
       <span class="chip" id="chipQuizzes" title="Multiple-choice quiz questions — guess-the-output and 'make-this-query-faster' scenarios. Progress tracked separately from problems.">0 Quizzes</span>
       <span class="chip rust" title="Your query is scored against a gold query across multiple datasets — not just the visible example. A pass means your query handles ties, NULLs, and empty groups.">Hidden Edge-Case Validator</span>
       <span class="chip muted" title="⌘K opens the jump palette · ?j / ?k move between sections · / focuses the filter.">⌘K to search · ?j for next section</span>
@@ -3821,7 +3821,7 @@ body.sandbox-open { overflow: hidden; }
         <span class="reset-ico" aria-hidden="true">✅</span>
         <div class="reset-item-body">
           <div class="reset-item-title">Every solved problem</div>
-          <div class="reset-item-sub">All passed / attempted markers across the 58 practice problems.</div>
+          <div class="reset-item-sub">All passed / attempted markers across the 70 practice problems.</div>
         </div>
       </li>
       <li class="reset-item">
@@ -3879,7 +3879,7 @@ body.sandbox-open { overflow: hidden; }
         </svg>
         <div>
           <div class="mono text-lg"><span id="progPct">0</span>%</div>
-          <div class="text-xs text-[color:var(--muted)]"><span id="progCount">0</span> / <span id="progTotal">58</span> solved</div>
+          <div class="text-xs text-[color:var(--muted)]"><span id="progCount">0</span> / <span id="progTotal">70</span> solved</div>
         </div>
       </div>
 
@@ -3971,7 +3971,7 @@ body.sandbox-open { overflow: hidden; }
   <div class="max-w-4xl mx-auto px-6">
     <div class="rule mb-10 opacity-40"></div>
     <p class="serif italic text-xl mb-3">&ldquo;A query is a compass. The schema is the terrain.&rdquo;</p>
-    <p class="small-caps text-[color:var(--muted)]">Sandbox &middot; <span id="footerProblemCount">Fifty-eight</span> problems &middot; SQLite-WASM in your browser</p>
+    <p class="small-caps text-[color:var(--muted)]">Sandbox &middot; <span id="footerProblemCount">Seventy</span> problems &middot; SQLite-WASM in your browser</p>
     <p class="mono text-[0.7rem] text-[color:var(--muted)] mt-6 uppercase tracking-widest">
       🌀 Compiled &amp; Cartographed locally &middot; No telemetry &middot; No server
     </p>
@@ -7218,11 +7218,10 @@ ORDER BY d.customer_id;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | Customers Who Never Order | Easy | [▶ Practice](sql_sandbox.html?slug=customers-who-never-order) |
-| 2 | Department Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=department-highest-salary) |
-| 3 | Exchange Seats | Medium | [▶ Practice](sql_sandbox.html?slug=exchange-seats) |
-| 4 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) — first-order-per-customer filter via subquery in `WHERE (customer_id, order_date) IN (SELECT customer_id, MIN(order_date) ...)`. |
-| 5 | **Game Play Analysis V** | Hard | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-v) |
+| 1 | Department Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=department-highest-salary) |
+| 2 | Exchange Seats | Medium | [▶ Practice](sql_sandbox.html?slug=exchange-seats) |
+| 3 | Immediate Food Delivery II | Medium | [▶ Practice](sql_sandbox.html?slug=immediate-food-delivery-ii) |
+| 4 | **Game Play Analysis V** | Hard | [▶ Practice](sql_sandbox.html?slug=game-play-analysis-v) |
 
 ---
 
@@ -7477,8 +7476,8 @@ WHERE NOT EXISTS (
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
 | 1 | Customers Who Never Order | Easy | [▶ Practice](sql_sandbox.html?slug=customers-who-never-order) |
-| 2 | **Products Never Purchased (NULL-Trap Edition)** | Medium | [▶ Practice](sql_sandbox.html?slug=products-never-purchased) — the canonical `NOT IN` vs `NOT EXISTS` disaster. One `NULL` gift-card order in the subquery returns zero rows from a naïve `NOT IN`. See §0.2. |
-| 3 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) — self-join to list friend-of-friend candidates, anti-join to exclude people already followed. |
+| 2 | **Products Never Purchased (NULL-Trap Edition)** | Medium | [▶ Practice](sql_sandbox.html?slug=products-never-purchased) |
+| 3 | **Friends Recommendations** | Hard | [▶ Practice](sql_sandbox.html?slug=leetcodify-friends-recommendations) |
 
 ---
 
@@ -7663,7 +7662,7 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | Students and Examinations | Easy | [▶ Practice](sql_sandbox.html?slug=students-and-examinations) — CROSS JOIN every student with every exam, then LEFT JOIN attendance to count how many times each student took each exam. The canonical "every (student, exam) combo even if zero attendances" shape. |
+| 1 | Students and Examinations | Easy | [▶ Practice](sql_sandbox.html?slug=students-and-examinations) |
 
 ---
 
@@ -7698,8 +7697,8 @@ LEFT JOIN pay_tot  p ON p.order_id = o.id;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | Count Salary Categories | Medium | [▶ Practice](sql_sandbox.html?slug=count-salary-categories) — three category labels stacked with `UNION ALL`, each side a single-row aggregate so empty buckets still surface as `0`. |
-| 2 | Friend Requests II | Medium | [▶ Practice](sql_sandbox.html?slug=friend-requests-ii) — `UNION ALL` the requester-side and accepter-side counts into one stack, then aggregate by id. |
+| 1 | Count Salary Categories | Medium | [▶ Practice](sql_sandbox.html?slug=count-salary-categories) |
+| 2 | Friend Requests II | Medium | [▶ Practice](sql_sandbox.html?slug=friend-requests-ii) |
 
 ---
 
@@ -7978,7 +7977,7 @@ ORDER BY category_name, units DESC;
 | 1 | Second Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=second-highest-salary) |
 | 2 | Nth Highest Salary | Medium | [▶ Practice](sql_sandbox.html?slug=nth-highest-salary) |
 | 3 | Rank Scores | Medium | [▶ Practice](sql_sandbox.html?slug=rank-scores) |
-| 4 | **Latest Two Orders Per Customer** | Medium | [▶ Practice](sql_sandbox.html?slug=latest-two-orders-per-customer) — the canonical LATERAL / CROSS APPLY shape: multiple columns *and* multiple rows per parent. Solve it two ways — once with `ROW_NUMBER()` (SQLite-safe) and once with `LATERAL` (Postgres/SQL Server mental model). |
+| 4 | **Latest Two Orders Per Customer** | Medium | [▶ Practice](sql_sandbox.html?slug=latest-two-orders-per-customer) |
 | 5 | **Department Top Three Salaries** | Hard | [▶ Practice](sql_sandbox.html?slug=department-top-three-salaries) |
 | 6 | **Market Analysis II** | Hard | [▶ Practice](sql_sandbox.html?slug=market-analysis-ii) |
 
@@ -8136,8 +8135,7 @@ ORDER BY trade_date;
 
 | # | Problem | Difficulty | Practice |
 |---|---|---|---|
-| 1 | Consecutive Numbers | Medium | [▶ Practice](sql_sandbox.html?slug=consecutive-numbers) |
-| 2 | Number of Comments per Post | Medium | [▶ Practice](sql_sandbox.html?slug=number-of-comments-per-post) |
+| 1 | Number of Comments per Post | Medium | [▶ Practice](sql_sandbox.html?slug=number-of-comments-per-post) |
 
 ---
 
@@ -8308,8 +8306,8 @@ for totals, but **distinct** counts need the correlated subquery (or a self-join
 | 2 | Last Person to Fit in the Bus | Medium | [▶ Practice](sql_sandbox.html?slug=last-person-to-fit-in-the-bus) |
 | 3 | Account Balance | Medium | [▶ Practice](sql_sandbox.html?slug=account-balance) |
 | 4 | Rolling 7-Day Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=rolling-7-day-active-users) |
-| 5 | **Find Cumulative Salary of an Employee** | Hard | [▶ Practice](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) — three-month running sum per employee using `SUM(...) OVER (PARTITION BY id ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)`. |
-| 6 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) — windowed `AVG(salary) OVER (PARTITION BY dept_id)` vs the company-wide `AVG(salary) OVER ()`, then label each row higher / lower / same. |
+| 5 | **Find Cumulative Salary of an Employee** | Hard | [▶ Practice](sql_sandbox.html?slug=find-cumulative-salary-of-an-employee) |
+| 6 | **Average Salary: Departments vs Company** | Hard | [▶ Practice](sql_sandbox.html?slug=average-salary-departments-vs-company) |
 | 7 | **Median Given Frequency of Numbers** | Hard | [▶ Practice](sql_sandbox.html?slug=median-given-frequency-of-numbers) |
 
 ---
@@ -9044,7 +9042,7 @@ explosion, reply-thread depth — the recursion builds the transitive closure, t
 | 2 | Find the Missing IDs | Medium | [▶ Practice](sql_sandbox.html?slug=find-the-missing-ids) |
 | 3 | Managers with At Least 5 Reports | Medium | [▶ Practice](sql_sandbox.html?slug=managers-with-at-least-5-reports) |
 | 4 | **Find the Quiet Students in All Exams** | Hard | [▶ Practice](sql_sandbox.html?slug=find-the-quiet-students-in-all-exams) |
-| 5 | **Tree Node** | Medium | [▶ Practice](sql_sandbox.html?slug=tree-node) — classify each node as Root / Inner / Leaf using a self-referencing hierarchy. |
+| 5 | **Tree Node** | Medium | [▶ Practice](sql_sandbox.html?slug=tree-node) |
 
 ---
 
@@ -9666,14 +9664,14 @@ GROUP BY DATE_FORMAT(trans_date, '%Y-%m'), country;
 | 4 | Cohort Retention Day N | Hard | [▶ Practice](sql_sandbox.html?slug=cohort-retention-day-n) |
 | 5 | **Friday Purchases I** | Hard | [▶ Practice](sql_sandbox.html?slug=friday-purchases-i) |
 | 6 | **New Users Daily Count** | Medium | [▶ Practice](sql_sandbox.html?slug=new-users-daily-count) |
-| 7 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) — pivot quantities by `DAYNAME(order_date)` so each item has Monday…Sunday columns. |
-| 8 | **Customers with Strictly Increasing Purchases** | Hard | [▶ Practice](sql_sandbox.html?slug=customers-with-strictly-increasing-purchases) — extract the year via `strftime('%Y', order_date)` (or `EXTRACT`/`YEAR`), sum per (customer, year), then `LAG` over years to require every step both `+1` year apart and strictly increasing. |
-| 9 | Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) — 5+ consecutive-day streaks → group by `(activity_date − ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY activity_date))`, which needs `JULIANDAY` to subtract dates. |
-| 10 | **Consecutive Transactions** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions) — islands of consecutive trans-days; the gap key uses `JULIANDAY(trans_date) − ROW_NUMBER()`. |
-| 11 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) — gaps & islands plus monotonic-step check; same `JULIANDAY` gap-key technique. |
-| 12 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) — recursive month-spine 2020-01..12 generated with `date('2020-01-01', '+' || (n-1) || ' month')` then left-joined to monthly aggregates of `strftime('%Y-%m', request_at)`. |
-| 13 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) — extends the recursive month-spine with acceptance-rate per month using the same `strftime` grouping. |
-| 14 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) — sessionization with 5-minute idle gap → `LAG(activity_time)` plus `(julianday(t) − julianday(prev)) * 86400 > 300` to start a new session. |
+| 7 | **Sales by Day of the Week** | Hard | [▶ Practice](sql_sandbox.html?slug=sales-by-day-of-the-week) |
+| 8 | **Customers with Strictly Increasing Purchases** | Hard | [▶ Practice](sql_sandbox.html?slug=customers-with-strictly-increasing-purchases) |
+| 9 | Active Users | Medium | [▶ Practice](sql_sandbox.html?slug=active-users) |
+| 10 | **Consecutive Transactions** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions) |
+| 11 | **Consecutive Transactions with Increasing Amounts** | Hard | [▶ Practice](sql_sandbox.html?slug=consecutive-transactions-with-increasing-amounts) |
+| 12 | **Hopper Company Queries I** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-i) || (n-1) || ' month')` then left-joined to monthly aggregates of `strftime('%Y-%m', request_at)`. |
+| 13 | **Hopper Company Queries II** | Hard | [▶ Practice](sql_sandbox.html?slug=hopper-company-queries-ii) |
+| 14 | User Activity Sessions | Hard | [▶ Practice](sql_sandbox.html?slug=user-activity-sessions) |
 
 ---
 
